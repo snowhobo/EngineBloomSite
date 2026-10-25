@@ -1,0 +1,9 @@
+var glyphs_footer_right = {
+
+    view: function () {
+        return glyphs_content.variants() && glyphs_content.variants().length > 0
+            ? m('span', pl.t("# Variants:") + ' ' + glyphs_content.variants().length )
+            : m('span', '' )
+
+    }
+};

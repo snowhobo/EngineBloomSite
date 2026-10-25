@@ -1,0 +1,47 @@
+
+// currently only for creating new.
+var AddLigatureModal = {
+    ligatures: m.prop(""),
+    add: function () {
+        var liga_array = AddLigatureModal.ligatures().split(',');
+
+        // Filter empty lines
+        liga_array = liga_array.filter(function(item) {
+           return item.trim().length > 0
+        });
+
+        // max length and strip spaces
+        liga_array = liga_array.map(function(item) {
+            item = item.replace(" ", "");        // todo4: Ligatures can't contain spaces as we use them as separator for when encoding on the barcode.
+            return item.trim().substr(0, 10);    // todo3: make this max length for ligatures global configurable
+        });
+
+        liga_array = uniqueArray(liga_array);
+
+        templates_module.add_glyphs(liga_array);
+        Modal.module(null);
+        m.redraw()
+    },
+
+    controller: function() {
+        AddLigatureModal.ligatures("");
+    },
+
+    view: function (ctrl) {
+        return [
+            m(".form", [
+                m("h3", pl.t("Add arbitrary Ligatures")),
+                build_text_field(pl.t('Ligatures separated by comma'),
+                    AddLigatureModal.ligatures
+                ),
+                // build_form_buttons(AddLigatureModal.add.bind(this, AddLigatureModal), pl.t('Add Ligatures'))
+                m(__mdl_helper.form_buttons,{
+                    action_func: AddLigatureModal.add.bind(this, AddLigatureModal),
+                    action_label: pl.t('Add Ligatures'),
+                    disabled: AddLigatureModal.ligatures().trim().length == 0
+                })
+            ])
+        ]
+    }
+};
+

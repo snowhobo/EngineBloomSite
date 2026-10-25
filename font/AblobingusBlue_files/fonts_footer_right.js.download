@@ -1,0 +1,9 @@
+var fonts_footer_right = {
+
+    view: function () {
+        return fonts_module.units() && fonts_module.units().length > 0
+            ? m('span', pl.t("# Glyphs:") + " " + fonts_module.units().length )
+            : m('span', '' )
+
+    }
+};

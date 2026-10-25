@@ -1,0 +1,69 @@
+/* global __pixit, m */
+
+__pixit.previewCanvas = (function previewCanvas() {
+    /**
+     * This component's max width is set by its parent's width
+     *
+     * @type {number}
+     */
+    var maxWidth;
+
+    /**
+     * While the max width is not reached adjust the component to the arguments, then downscale it
+     *
+     * @param {number} width
+     * @param {number} height
+     * @return {number}
+     */
+    function getHeight(width, height) {
+        if (maxWidth && width > maxWidth) {
+            return height * maxWidth / width;
+        }
+
+        return height;
+    }
+
+    /**
+     * @param {object} ctrl
+     * @param {{width: number, height: number, el: function, canvasCopy: function}} args
+     * @return {VirtualDomEl}
+     */
+    function view(ctrl, args) {
+        return m('#previewCanvas-wrap', m('canvas.previewCanvas#previewCanvas', {
+            config: function conf(el, isInit, context) {
+                if (!isInit || init_again_previewCanvas ) {
+                    context.width = args.width;
+
+                    args.el(el);
+
+                    maxWidth = el.parentNode.getBoundingClientRect().width;
+                    __pixit.drawing.disableSmoothing(el.getContext('2d'));
+
+                    init_again_previewCanvas = false;
+                }
+
+                if (args.width === context.width) {
+                    return;
+                }
+
+                context.width = args.width;
+
+                var canvasCopy = args.canvasCopy();
+
+                // redraw the canvas whenever the size changes (and redisable smoothing, since size changes
+                // enable it again)
+                var ctx = el.getContext('2d');
+                __pixit.drawing.disableSmoothing(ctx);
+                ctx.clearRect(0, 0, el.width, el.height);
+                ctx.drawImage(canvasCopy, 0, 0, el.width, el.width * canvasCopy.height / canvasCopy.width);
+
+            },
+            width: args.width,
+            height: args.height //getHeight(args.width, args.height)
+        }));
+    }
+
+    return {
+        view: view
+    };
+})();

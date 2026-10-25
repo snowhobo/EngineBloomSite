@@ -1,0 +1,450 @@
+/* global __pixit, m */
+
+__pixit.appVm = (function appVm() {
+  var model = __pixit.appModel;
+
+  /**
+   * Getter/setter that stores the variable width of the drawing canvas
+   *
+   * @return {number}
+   */
+  var drawingCanvasWidth = m.prop(null);
+
+  /**
+   * Getter/setter that stores whether to show the loading spinner
+   *
+   * @return {boolean}
+   */
+  var showSpinner = m.prop(false);
+
+  /**
+   * Getter/setter that stores the previous mouse coordinates used to draw; this value is set on
+   * the drawing function with the coordinates provided by the mousemove event. It's also set to
+   * NULL when the drawing stops (mouseup/mouseout)
+   *
+   * @return {?CanvasCoords}
+   */
+  var prevMouseCoords = m.prop(null);
+
+  /**
+   * Get the distance from the previous coordinates to a given point (Pythagorean theorem)
+   *
+   * @param {?CanvasCoords} prevCoords
+   * @param {CanvasCoords} coords
+   * @return {number}
+   */
+  function getDistanceFromPrevToCoords(prevCoords, coords) {
+    if (!prevCoords) {
+      return 0;
+    }
+
+    return Math.sqrt(Math.pow(coords.x - prevCoords.x, 2) + Math.pow(coords.y - prevCoords.y, 2));
+  }
+
+  /**
+   * Translate a point from the drawing canvas to its copy, the only operation needed is to unscale
+   * the zoom because the coordinates have already been snapped to the grid in "getGridInitCoords"
+   *
+   * @param {CanvasCoords} coords
+   * @return {CanvasCoords}
+   */
+  function coordsToCopyCanvas(coords) {
+    var zoom = zoomVal();
+
+    return {
+      x: coords.x / zoom,
+      y: coords.y / zoom
+    };
+  }
+
+  /**
+   * Get the CanvasState related to a given start point and width/height; applying a safety pixel
+   * value to prevent any painted pixels to escape the drawing area
+   *
+   * @param {CanvasCoords} topLeftVertex
+   * @param {CanvasCoords} widthHeight
+   * @param {number} [safetyPx=__pixit.SAFETY_PIXELS]
+   * @return {CanvasState}
+   */
+  function getCanvasState(topLeftVertex, widthHeight, safetyPx) {
+    if (!safetyPx) {
+      safetyPx = __pixit.SAFETY_PIXELS;
+    }
+
+    return {
+      data: model.canvasCopy().getContext('2d').getImageData(
+        topLeftVertex.x - safetyPx,
+        topLeftVertex.y - safetyPx,
+        widthHeight.x + 2 * safetyPx,
+        widthHeight.y + 2 * safetyPx
+      ),
+      coords: {
+        x: topLeftVertex.x - safetyPx,
+        y: topLeftVertex.y - safetyPx
+      }
+    };
+  }
+
+  /**
+   * Given two coordinates, get the top left vertex of the rectangle they create, and its
+   * width/height. If an offset is provided, add that to the sides of the rectangle.
+   *
+   * @param {CanvasCoords} coordsA
+   * @param {CanvasCoords} coordsB
+   * @param {number} [offset=0]
+   * @return {{topLeft: CanvasCoords, widthHeight: CanvasCoords}}
+   */
+  function getRectangleData(coordsA, coordsB, offset) {
+    if (!offset) {
+      offset = 0;
+    }
+
+    var topLeft = {
+      x: Math.min(coordsA.x, coordsB.x),
+      y: Math.min(coordsA.y, coordsB.y)
+    };
+
+    return {
+      topLeft: topLeft,
+      widthHeight: {
+        x: Math.max(coordsA.x, coordsB.x) - topLeft.x + offset,
+        y: Math.max(coordsA.y, coordsB.y) - topLeft.y + offset
+      }
+    };
+  }
+
+  /**
+   * When the canvas is zoomed, drawing positions must match real pixels in the original canvas, so
+   * use Math.floor to remove the remainder and get the integer pixel. Example: zoom 3, coords (8,5)
+   * means the grid must be located in (6,3) which corresponds to (2,1) in the original canvas.
+   *
+   * @param {CanvasCoords} coords
+   * @return {CanvasCoords}
+   */
+  function getGridInitCoords(coords) {
+    var zoom = zoomVal();
+
+    return {
+      x: Math.floor(coords.x / zoom) * zoom,
+      y: Math.floor(coords.y / zoom) * zoom
+    };
+  }
+
+  /**
+   * Get the image data related to the area to be drawn with the provided mouse coordinates,
+   * depending on whether it's a click (no previous coordinates) or a move event
+   *
+   * @param {CanvasCoords} coords
+   * @return {CanvasState}
+   */
+  function getAreaToBeDrawn(coords) {
+    var copyCoords = coordsToCopyCanvas(getGridInitCoords(coords));
+    // size of the figure drawn in the copy canvas
+    var size = pencilSizeVal();
+    var prevCoords = prevMouseCoords();
+
+    if (!prevCoords) {
+      return getCanvasState(copyCoords, { x: size, y: size });
+    }
+
+    // if the mouse is moving, the area drawn is the difference between previous and current coords
+    var copyPrevCoords = coordsToCopyCanvas(getGridInitCoords(prevCoords));
+
+    var rect = getRectangleData(copyPrevCoords, copyCoords, size);
+
+    return getCanvasState(rect.topLeft, rect.widthHeight, size);
+  }
+
+  /**
+   * Get the angle between two sets of coordinates separated a given distance
+   *
+   * @param {CanvasCoords} prevCoords
+   * @param {CanvasCoords} coords
+   * @param {number} dist
+   * @return {number}
+   */
+  function getAngle(prevCoords, coords, dist) {
+    return Math.acos((coords.x - prevCoords.x) / dist);
+  }
+
+  /**
+   * Get the step needed to get closer from a previous position to the final coords depending on a
+   * given accepted minimum distance between them
+   *
+   * @param {CanvasCoords} prevCoords
+   * @param {CanvasCoords} coords
+   * @param {number} dist
+   * @param {number} minDist
+   * @return {CanvasCoords}
+   */
+  function getStep(prevCoords, coords, dist, minDist) {
+    var angle = getAngle(prevCoords, coords, dist);
+
+    return {
+      x: Math.cos(angle) * minDist,
+      y: Math.sin(angle) * minDist * (coords.y >= prevCoords.y ? 1 : -1)
+    };
+  }
+
+  /**
+   * Draw on the given coords of the copy canvas, and then replicate that on the drawing canvas
+   *
+   * @param {CanvasCoords} drawCoords
+   */
+  function drawOnCoords(drawCoords) {
+    var pencilSize = pencilSizeVal();
+    var zoom = zoomVal();
+    var size = pencilSize * zoom;
+
+    var canvasCopy = model.canvasCopy();
+    var copyCoords = coordsToCopyCanvas(drawCoords);
+
+    __pixit.drawing.drawShape(canvasCopy, copyCoords, pencilSize);
+
+    var ctx = model.drawingCanvas().getContext('2d');
+
+    ctx.clearRect(drawCoords.x, drawCoords.y, size, size);
+    ctx.drawImage(
+      canvasCopy,
+      copyCoords.x, copyCoords.y, pencilSize, pencilSize,
+      drawCoords.x, drawCoords.y, size, size
+    );
+  }
+
+  /* eslint no-param-reassign: "off" */
+  /**
+   * Recursive function that draws from the the previous mouse coordinates to the provided
+   * coordinates while the distance between the two points is bigger than the minimum accepted.
+   * This is done in order to avoid the gaps left by the mouse movement.
+   *
+   * @param {CanvasCoords} coords - Final coordinates of the drawing
+   * @param {CanvasCoords} [step] - distance that an intermediate point has to be set from the
+   * previous point; it is provided when drawing on a line so it doesn't have to be recalculated
+   * every time
+   */
+  function drawFromPrevToCoords(coords, step) {
+    var prevCoords = prevMouseCoords();
+    var dist = getDistanceFromPrevToCoords(prevCoords, coords);
+    var minDist = zoomVal() / 2;
+
+    var drawCoords;
+
+    // if the coordinates are too far away, set a closer point in the same line instead
+    if (dist > minDist) {
+      step = step ? step : getStep(prevCoords, coords, dist, minDist);
+
+      drawCoords = { x: prevCoords.x + step.x, y: prevCoords.y + step.y };
+    } else {
+      drawCoords = { x: coords.x, y: coords.y };
+    }
+
+    drawOnCoords(getGridInitCoords(drawCoords));
+
+    prevMouseCoords(drawCoords);
+
+    if (dist > minDist) {
+      drawFromPrevToCoords(coords, step);
+    }
+  }
+
+  /**
+   * Get the cursor's coordinates relative to the drawing canvas
+   *
+   * @param {MouseEvent} e
+   * @return {CanvasCoords}
+   */
+  function getCanvasRelCoords(e) {
+    var canvasRect = model.drawingCanvas().getBoundingClientRect();
+
+    return {
+      x: e.clientX - canvasRect.left,
+      y: e.clientY - canvasRect.top
+    };
+  }
+
+  /**
+   * Draw on the selected position of the canvas
+   *
+   * @param {MouseEvent} e
+   */
+  function draw(e) {
+    var coords = getCanvasRelCoords(e);
+
+    pushState(getAreaToBeDrawn(coords));
+
+    drawFromPrevToCoords(coords);
+  }
+
+  /**
+   * Update the preview canvas with the content of the drawing canvas' copy, keeping the
+   * width/height ratio of that canvas
+   */
+  function updatePreview() {
+    var prev = model.previewCanvas();
+    var canvasCopy = model.canvasCopy();
+    var ctx = prev.getContext('2d');
+
+    ctx.clearRect(0, 0, prev.width, prev.height);
+    ctx.drawImage(canvasCopy, 0, 0, prev.width, prev.width * canvasCopy.height / canvasCopy.width);
+  }
+
+  /**
+   * Getter/setter that stores whether the cursor's shade has to be shown
+   *
+   * @return {boolean}
+   */
+  var showShade = m.prop(false);
+
+  /**
+   * Move the cursor's shade along with the cursor, positioning it in relation to "#js-rightCol"
+   * (the closest positioned parent) and the drawing canvas
+   *
+   * @param {MouseEvent} e
+   */
+  function moveCursorShade(e) {
+    var rightCol = model.rightCol;
+
+    if (!rightCol()) {
+      rightCol(document.getElementById('js-rightCol'));
+    }
+
+    var rightColRect = rightCol().getBoundingClientRect();
+    var canvasRect = model.drawingCanvas().getBoundingClientRect();
+
+    var gridCoords = getGridInitCoords(getCanvasRelCoords(e));
+
+    var shade = model.cursorShade();
+
+    shade.style.left = (gridCoords.x + canvasRect.left - rightColRect.left) + 'px';
+    shade.style.top = (gridCoords.y + canvasRect.top - rightColRect.top) + 'px';
+  }
+
+  /**
+   * Getter/setter that stores the zoom's value
+   *
+   * @return {number}
+   */
+  var zoomVal = m.prop(__pixit.MIN_ZOOM);
+
+  /**
+   * Getter/setter that stores the pencil's size value
+   *
+   * @return {number}
+   */
+  var pencilSizeVal = m.prop(10);
+
+  /**
+   * Getter/setter that stores the pencil's selected shape
+   *
+   * @return {string}
+   */
+  var shapeVal = m.prop(__pixit.shapes.SQUARE.val);
+
+  /**
+   * Getter/setter that stores whether the eraser is selected
+   *
+   * @return {string}
+   */
+  var isErasing = m.prop(false);
+
+  /**
+   * Array that stores the latest drawing changes
+   *
+   * @type {CanvasOperation[]}
+   */
+  var stateStack = m.prop([]);
+
+  /**
+   * Store a new state, up to a max size
+   *
+   * @param {CanvasState} state
+   */
+  function pushState(state) {
+    if (stateStack().length === __pixit.MAX_STACK_SIZE) {
+      stateStack().shift();
+    }
+
+    // if there are no previous coords, the draw operation is starting, so push a single-state array
+    if (!prevMouseCoords()) {
+
+      stateStack().push([state]);
+
+
+    // otherwise, add the state to the latest operation
+    } else {
+      var lastOp = stateStack()[stateStack().length - 1];
+      lastOp.push(state);
+    }
+  }
+
+  /**
+   * Pop the most recent state from the array
+   *
+   * @return {CanvasState}
+   */
+  function popState() {
+    return stateStack().pop();
+  }
+
+  /**
+   * Undo a canvas state on the canvas copy
+   *
+   * @param {CanvasState} data
+   */
+  function undoState(data) {
+    model.canvasCopy().getContext('2d').putImageData(data.data, data.coords.x, data.coords.y);
+  }
+
+  /**
+   * Pop the last state, put it on the canvas' copy, and replicate it on the drawing canvas
+   * and the preview
+   */
+  function undo() {
+    var state = popState();
+
+    // reverse the CanvasOperation so it's undone in the correct order
+    state.reverse().forEach(undoState);
+
+    var canvas = model.drawingCanvas();
+    var drawingCtx = canvas.getContext('2d');
+    var width = canvas.width;
+    var height = canvas.height;
+
+    drawingCtx.clearRect(0, 0, width, height);
+    drawingCtx.drawImage(model.canvasCopy(), 0, 0, width, height);
+
+    updatePreview();
+  }
+
+  /**
+   * Reset all elements when unloading the app component
+   */
+  function reset() {
+    drawingCanvasWidth(null);
+    showSpinner(false);
+    prevMouseCoords(null);
+    showShade(false);
+    zoomVal(__pixit.MIN_ZOOM);
+    pencilSizeVal(10);
+    shapeVal(__pixit.shapes.SQUARE.val);
+    isErasing(false);
+    stateStack([]);
+  }
+
+  return {
+    drawingCanvasWidth: drawingCanvasWidth,
+    showSpinner: showSpinner,
+    prevMouseCoords: prevMouseCoords,
+    draw: draw,
+    updatePreview: updatePreview,
+    showShade: showShade,
+    moveCursorShade: moveCursorShade,
+    zoomVal: zoomVal,
+    pencilSizeVal: pencilSizeVal,
+    shapeVal: shapeVal,
+    isErasing: isErasing,
+    stateStack: stateStack,
+    undo: undo,
+    reset: reset
+  };
+})();

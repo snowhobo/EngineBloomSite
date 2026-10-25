@@ -1,0 +1,224 @@
+/* global __pixit, m */
+
+__pixit.drawingCanvas = (function drawingCanvas() {
+    var vm = (function vm() {
+        /**
+         * Getter/setter that stores whether we are drawing
+         *
+         * @return {boolean}
+         */
+        var isDrawing = m.prop(false);
+
+        return {
+            isDrawing: isDrawing
+        };
+    })();
+
+    /**
+     * Get the coordinates to center an img inside a canvas
+     *
+     * @param {HTMLImageElement} img
+     * @param {HTMLCanvasElement} canvas
+     * @return {CanvasCoords}
+     */
+    function getCenteringCoords(img, canvas) {
+        var rect = canvas.getBoundingClientRect();
+
+        return {
+            x: (rect.width - img.width) / 2,
+            y: (rect.height - img.height) / 2
+        };
+    }
+
+    /**
+     * When the img is fully loaded, draw it on the canvas, make a copy of it to work with the zoom,
+     * and update the preview canvas
+     *
+     * @param {HTMLCanvasElement} canvas
+     * @param {DrawingCanvasArgs} args
+     * @this {HTMLImageElement}
+     */
+    function onImgLoad(canvas, args, zoom) {
+        // var coords = getCenteringCoords(this, canvas);
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(
+            this,
+            0, //coords.x,
+            0, //coords.y,
+            this.width*zoom,
+            this.height*zoom
+        );
+        //black_white_context(ctx, 0,0,this.width, this.height);
+
+        var canvasCopy = __pixit.drawing.getCanvasCopy(canvas);
+
+        // fill the copy with the current canvas content, but after that it will be the copy that fills
+        // the visible drawing canvas
+        canvasCopy.getContext('2d').drawImage(canvas, 0, 0);
+
+        args.canvasCopy(canvasCopy);
+
+        args.updatePreview();
+    }
+
+
+    function loadImage(canvas, args, zoom) {
+        var img = new Image();
+
+        img.onload = onImgLoad.bind(img, canvas, args, zoom);
+
+        img.src = args.src;
+
+    }
+
+    /**
+     * @typedef {object} DrawingCanvasArgs
+     * @property {number} width
+     * @property {number} height
+     * @property {number} maxWidth
+     * @property {function} canvasContainer
+     * @property {function} el
+     * @property {function} showSpinner
+     * @property {function} prevMouseCoords
+     * @property {function} draw
+     * @property {function} canvasCopy
+     * @property {function} updatePreview
+     * @property {function} showShade
+     * @property {function} moveCursorShade
+     * @property {function} zoom
+     * @property {function} shape
+     * @property {string} src - "src" attribute of the image to be loaded on the canvas
+     */
+
+    /**
+     * @param {undefined} ctrl
+     * @param {DrawingCanvasArgs} args
+     * @return {VirtualDomEl}
+     */
+    function view(ctrl, args) {
+
+        var zoom = args.zoom();
+        var zoomedWidth = args.width * zoom;
+        var zoomedHeight = args.height * zoom;
+
+        // container that hides the real canvas size and allows scrollbar use
+        return m('.canvasContainer',
+            {
+                config: function conf(el, isInit, context) {
+                    if (!isInit) {
+                        context.zoom = zoom;
+
+                        args.canvasContainer(el);
+                    }
+
+                    if (zoom === context.zoom) {
+                        return;
+                    }
+
+                    context.zoom = zoom;
+
+                    // scroll to the center whenever the zoom changes
+                    el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+                    el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+                },
+                // add the border size to width/height so overflow is not shown since the beginning
+                style: {
+                    // width: (args.width + __pixit.CONTAINER_BORDERS) + 'px',
+                    // height: (args.height + __pixit.CONTAINER_BORDERS) + 'px',
+                    // 'max-width': args.maxWidth + 'px',
+                    // 'max-height': args.maxWidth + 'px'      // <<
+                }
+            }, [
+                m(__pixit.spinner, {
+                    width: args.width + __pixit.CONTAINER_BORDERS,
+                    height: args.height + __pixit.CONTAINER_BORDERS,
+                    show: args.showSpinner
+                }),
+                // this must have a higher z-index than .cursorShade so the shade movements don't trigger
+                // mouseout events
+                m('.mousePlayground', {
+                    class: args.showSpinner() ? 'no' : '',
+                    style: {
+                        width: zoomedWidth + 'px',
+                        height: zoomedHeight + 'px'
+                    },
+                    onmousedown: function down(e) {
+                        // start drawing only if the user clicks the left button
+                        if (e.button !== 0) {
+                            m.redraw.strategy('none');
+
+                            return;
+                        }
+
+                        vm.isDrawing(true);
+                        args.showShade(false);
+
+                        // draw in case the user is only clicking and then not moving
+                        args.draw(e);
+                        args.updatePreview();
+                    },
+                    onmouseup: function up(e) {
+                        vm.isDrawing(false);
+                        args.showShade(true);
+                        args.updatePreview();
+
+                        args.prevMouseCoords(null);
+
+                        // move the shade where the drawing stopped
+                        args.moveCursorShade(e);
+                    },
+                    onmouseout: function out() {
+                        vm.isDrawing(false);
+                        args.showShade(false);
+                        args.updatePreview();
+
+                        args.prevMouseCoords(null);
+                    },
+                    onmouseenter: function enter(e) {
+                        args.showShade(true);
+                        args.moveCursorShade(e);
+                    },
+                    onmousemove: function move(e) {
+                        if (vm.isDrawing()) {
+                            args.draw(e);
+                        } else {
+                            args.moveCursorShade(e);
+                        }
+                    }
+                }),
+                m('canvas.drawingCanvas#drawingCanvas', {
+                    class: args.showSpinner() ? 'no' : '',
+                    config: function conf(el, isInit, context) {
+                        // load the image given as "src" on the canvas
+                        if (!isInit || init_again_drawingCanvas ) {
+                            context.zoom = zoom;
+                            context.width = el.width;
+
+                            args.el(el);
+
+                            loadImage(el, args, zoom);
+
+                            init_again_drawingCanvas = false;
+                        }
+                        if (el.width === context.width && zoom === context.zoom) {
+                            return;
+                        }
+
+                        context.zoom = zoom;
+                        context.width = el.width;
+
+                        // update the canvas with the copy content whenever the zoom or size change (in case of
+                        // the width, redraw because mithril has recreated the canvas due to the size change)
+                        __pixit.drawing.clearAndDrawScaled(el, args.canvasCopy());
+                    },
+                    width: zoomedWidth,
+                    height: zoomedHeight
+                })
+            ]
+        );
+    }
+
+    return {
+        view: view
+    };
+})();

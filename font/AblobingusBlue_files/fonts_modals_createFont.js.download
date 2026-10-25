@@ -1,0 +1,295 @@
+/* For the Dialog handling the Build Form action.
+ SHows a form with some options. If user clikcs the 'Build' button the request is send to the server.
+ Server creates a task for the queue and resturns a Job Id. This Job id then polled for finished results.
+ If the results are available a Font Preview page is shown.
+ */
+
+
+var BuildFont = {
+    vm: {
+        result_show_share_dialog: m.prop(false),
+        is_randomization_possible: m.prop(),
+
+        // Form vars
+        font_name: m.prop(),
+        randomize: m.prop(),
+        glyph_advance: m.prop(),
+
+        // Job related stuff
+        is_request_send: m.prop(),
+        result: m.prop(),
+        error: m.prop(),
+        finished: m.prop(),
+
+        // Preview
+        preview_font_size: m.prop(),
+        nr_removed_chars: m.prop()
+    },
+
+    controller: function () {
+        clear_properties_of_object(BuildFont.vm);
+
+        BuildFont.vm.font_name(fonts_module.current_font().name);
+        BuildFont.vm.preview_font_size(36);
+        var is_random_possible = BuildFont.check_if_randomization_possible();
+        BuildFont.vm.is_randomization_possible(is_random_possible);
+        BuildFont.vm.randomize(is_random_possible);
+    },
+
+
+    check_if_randomization_possible: function () {
+        for (var i = 0; i < fonts_module.units().length; i++) {
+            if (fonts_module.units()[i].variants.length > 1) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    start_request: function () {
+        BuildFont.vm.is_request_send(true);
+        m.redraw(true);
+
+        // auto increment the font version. Save and reload the font list to update the version (not teh font_version)
+        // of the font. This part will run concurrently with the following as we do not wait for the promise.
+        fonts_module.current_font().font_version = (0.001 + parseFloat(fonts_module.current_font().font_version)).toFixed(3);
+        Fonts.save(fonts_module.current_font()).then(function(f) {
+            fonts_sidedrawer.updateFontsList();
+        });
+
+        var glyphs_to_send = JSON.parse(JSON.stringify(fonts_module.units()));  // hacky way to make a deep copy
+
+        // filter out glyphs with no variants
+        glyphs_to_send = glyphs_to_send.filter(function (glyph) {
+            return glyph.variants.length > 0;
+        });
+        // For non randmonized fonts send only the default glyph.
+        if (!BuildFont.vm.randomize()) {
+            glyphs_to_send = glyphs_to_send.slice().map(function (glyph) {
+                var variants = glyph.variants.filter(function (variant) {
+                    return variant.isDefault === true;
+                });
+                if (variants.length === 1) {
+                    glyph.variants = variants;
+                }
+                else {
+                    // If no glyph is marked as default we take the first one.
+                    glyph.variants = [glyph.variants[0]]
+                }
+                return glyph;
+            })
+        }
+
+        // Enforce limits
+        BuildFont.vm.nr_removed_chars((Math.max(0, glyphs_to_send.length - window.gn_config.plan_limits.nr_glyphs)));
+
+        // no ligatures for free users
+        glyphs_to_send = glyphs_to_send.filter(function (g) {
+            return window.fe_user.is_upgraded || countSymbols(g.unit) < 2
+        });
+        // Enforce max number glyphs
+        // We sort the glpyhs so that the most important glpyhs will come first and therefore will be included in the
+        // font. Important chars are alpha, ,.;?!, numeric ()"
+        var important_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        important_chars += important_chars.toLowerCase() + ',.;:?!@' + '0123456789+-' + 'üöäÜÖÄßéèçëòôöùàâ';
+        glyphs_to_send = glyphs_to_send.sort(function (a, b) {
+            if (important_chars.indexOf(a.unit) === -1 === important_chars.indexOf(a.unit) === -1) {
+                return a.unit > b.unit;
+            }
+            else {
+                if (important_chars.indexOf(a.unit) !== -1) {
+                    return -1
+                }
+                else {
+                    return 1
+                }
+            }
+        });
+        glyphs_to_send = glyphs_to_send.splice(0, window.gn_config.plan_limits.nr_glyphs);
+
+        // Enforce max number variants
+        glyphs_to_send = glyphs_to_send.map(function (g) {
+            g.variants = g.variants.splice(0, window.gn_config.plan_limits.nr_variants);
+            return g;
+        });
+
+        start_polling_request(
+            "/webapp/images2font/",
+            Object.assign({},
+                fonts_module.current_font(),
+                {
+                    glyphs: glyphs_to_send,
+                    font_name: BuildFont.vm.font_name(),
+                    randomize: BuildFont.vm.randomize(),
+                }),
+            BuildFont.vm.finished,
+            BuildFont.vm.error,
+            BuildFont.vm.result,
+            m.redraw
+        );
+    },
+
+    view_form: function () {
+        return m(".form",
+            [
+                m("h3", "Build font"),
+                build_text_field("Font name", BuildFont.vm.font_name, {}, {id: 'build-font-fontname'}),
+                build_checkbox("crte-fnts-rdmz-chbx", pl.t("Randomize characters"), BuildFont.vm.randomize,
+                    {disabled: !BuildFont.vm.is_randomization_possible()},
+                    {tooltip: !BuildFont.vm.is_randomization_possible() ? pl.t("no_variantion_no_random") : null}),
+
+                // build_form_buttons(BuildFont.start_request, pl.t("Build"))
+                m(__mdl_helper.form_buttons, {
+                    action_func: BuildFont.start_request,
+                    action_label: pl.t("Build"),
+                    action_button_id: 'build-font-submit-button'
+                })
+            ]);
+    },
+
+    view_result: function () {
+
+        // Sort the example text alphabetically, but english as first and all_glyphs at the end.
+        var headers = Object.keys(BuildFont.vm.result().text_examples).sort();
+        if (headers.indexOf('english') !== -1) {
+            headers.splice(headers.indexOf('english'), 1);
+            headers.unshift('english');
+        }
+        if (headers.indexOf('All glyphs') !== -1) {
+            headers.splice(headers.indexOf('All glyphs'), 1);
+            headers.push('All glyphs');
+        }
+        return m("#create-font-result", [
+                window.gn_config.enable_debug_opt || true
+                    ? m('a.button#open-share-dialog-button.mdl-button.mdl-js-button.mdl-button--raised.mdl-button--colored',
+                        {
+                            onclick: function () {
+                                BuildFont.vm.result_show_share_dialog(true)
+                            }
+                        },
+                        [m.trust('<i class="material-icons">share</i>&nbsp;'), pl.t('Share a font preview')])
+                    : null,
+
+                // Font file Downloads
+                m('.font-file-downloads', [
+                    m('h4', pl.t('Font files')),
+                    m('ul#font-downloads', [
+                        BuildFont.vm.result().font_files.map(function (ff) {
+                            var suffix = ff.file_name.split('.')[ff.file_name.split.length - 1];
+                            if (['woff', 'woff2'].indexOf(suffix) !== -1) {
+                                return null;
+                            }
+                            return m('li', [
+                                m('a[href=' + ff.rel_url + '].result-font-link', ff.file_name),
+                            ])
+                        })
+                    ])
+                ]),
+
+                BuildFont.vm.nr_removed_chars() > 0
+                    ? m('.dialog-hint', [pl.t("not_all_chars_plant_limit",
+                        {
+                            nr_glyphs_removed: BuildFont.vm.nr_removed_chars(),
+                            nr_allowed: window.gn_config.plan_limits.nr_glyphs,
+                            plan_name: window.gn_config.current_plan
+                        }),
+                        m.trust('<br>' + pl.t('enjoy_pro_version_by_upgrading', {upgrade_url: window.fe_urls.upgrade_url}))
+                    ])
+                    : null,
+
+                // Preview
+                m('h4', pl.t('Preview')),
+                m("link[href='" + BuildFont.vm.result().tempdir_relpath + "/" + BuildFont.vm.result().cssFileName + "'][rel=stylesheet]"),
+
+                m('#front-preview-slider-wrap',
+                    m(__mdl_helper.slider, {
+                        id: 'font-preview-slider',
+                        label: pl.t('Font preview size'),
+                        val: BuildFont.vm.preview_font_size,
+                        min: 8,
+                        max: 200,
+                        step: 1,
+                        showMinMax: true,
+                        showValue: false,
+                    })
+                ),
+
+                m("div#font-preview-tabs.mdl-tabs.mdl-js-tabs.mdl-js-ripple-effect", [
+                    m(".mdl-tabs__tab-bar", [
+                        headers.map(function (header, index) {
+                            var active = index === 0 ? ".is-active" : "";
+                            var panel_slug = 'panel-' + slugify(header);
+                            var tab_header = pl.has('lang_name.'+capitalizeFirstLetter(header))
+                                ? pl.t('lang_name.'+capitalizeFirstLetter(header))
+                                : pl.t(capitalizeFirstLetter(header));
+                            return m('a[href=#' + panel_slug + '].mdl-tabs__tab' + active, tab_header);
+                        }),
+                        // Size comparison tab, this one doesn't come from the server.
+                        m('a[href=#size-comparison].mdl-tabs__tab', pl.t('Size comparison'))
+                    ]),
+
+                    headers.map(function (header, index) {
+                        var panel_slug = 'panel-' + slugify(header);
+                        var active = index === 0 ? ".is-active" : "";
+                        return m("#" + panel_slug + ".mdl-tabs__panel" + active, [
+                            m('.font-preview-usage-hint', pl.t('Click into the text to add your own text.')),
+                            m(".font-preview.font-preview-tab.font-preview-sizeable",
+                                {
+                                    style: {
+                                        "font-size": BuildFont.vm.preview_font_size() + "px"
+                                    },
+                                    contentEditable: true,
+                                    spellcheck: false,
+                                    // original mode of copy paste into the editable field includes formatting
+                                    config: function (el, initialized) {
+                                        if (!initialized) {
+                                            el.addEventListener("paste", function (e) {
+                                                e.preventDefault();     // cancel default paste
+                                                var text = e.clipboardData.getData("text/plain");  // get text representation of clipboard
+                                                document.execCommand("insertHTML", false, text);   // insert text manually
+                                            });
+                                        }
+                                    }
+                                },
+                                BuildFont.vm.result().text_examples[header])
+                        ])
+                    }),
+
+                    // Size comparison tab, this one doesn't come from the server.
+                    m("#size-comparison.mdl-tabs__panel", [
+                        m('.font-preview-usage-hint', pl.t('font_preview_hint_size_compare')),
+                        m(".font-preview-sizeable.font-preview-tab",
+                            {style: {"font-size": BuildFont.vm.preview_font_size() + "px"}}, [
+                                BuildFont.vm.result().text_examples['Alphabet'].split(" ").map(function (char) {
+                                    return m('.size-compare-item.card.card-1', [
+                                        m('span.serif', char),
+                                        m('span.font-preview', char),
+                                        m('span.sans', char)
+                                    ])
+                                })
+                            ]
+                        )
+                    ])
+
+                ]),
+                m('#font-preview-bad-result-hint', m.trust(snippets['bad_result_hint']) ),
+                m(__mdl_helper.form_buttons, {})
+            ]
+        )
+    },
+
+    view: function () {
+        if (BuildFont.vm.result_show_share_dialog()) {
+            return m.component(ShareFont, BuildFont.vm.result())
+        }
+        return polling_view(
+            BuildFont.vm.is_request_send,
+            BuildFont.view_form,
+            BuildFont.vm.error,
+            BuildFont.vm.result,
+            BuildFont.view_result
+        )
+    }
+
+
+};

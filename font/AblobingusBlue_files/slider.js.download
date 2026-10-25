@@ -1,0 +1,40 @@
+/* global __pixit, m */
+
+__pixit.slider = {
+  /**
+   * @param {object} ctrl
+   * @param {{id: string,
+   * class: string|undefined
+   * label: string,
+   * val: function,
+   * max: number,
+   * width: number,
+   * maxWidth: number|undefined}} args
+   * @return {VirtualDomEl}
+   */
+  view: function view(ctrl, args) {
+    var style = { width: args.width + 'px' };
+
+    if (args.maxWidth) {
+      style['max-width'] = args.maxWidth + 'px';
+    }
+
+    return m('.slider', {
+      class: args.class ? args.class : '',
+      style: style
+    }, [
+      m('label.sliderLabel', { for: args.id }, args.label ),
+      // m('input.mdl-slider.mdl-js-slider', {
+      m('input.calli_slider', {
+        id: args.id,
+        type: 'range',
+        value: args.val(),
+        max: args.max,
+        min: args.min || 1,
+        onchange: m.withAttr('value', function change(val) {
+          args.val(Number(val));
+        })
+      })
+    ]);
+  }
+};

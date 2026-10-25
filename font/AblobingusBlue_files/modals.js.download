@@ -1,0 +1,92 @@
+// Don't know really what this Module stuff below is doing .
+var submodule = function(module, args) {
+    return module.view.bind(this, new module.controller(args))
+};
+
+var Modal = new function() {
+    var Modal = {};
+
+    Modal.hhhhh = null;
+
+    var bind = function(fn, args) {return fn.bind(this, args)};
+    var subview = function() {};
+
+    Modal.module = new function(store) {
+        return function(module, args) {
+
+            Modal.current_dialog = store;
+
+            if (arguments.length) {
+
+                store = module;
+                if (store) {
+                    subview = submodule(module, args)
+                }
+                else subview = function() {}
+            }
+            return store
+        }
+    };
+
+    Modal.controller = function(args, extras) {
+        var ctrl = this;
+        var handleKey;
+        var handleKeyDown;
+
+        ctrl.onunload = function() {
+            if (handleKey) {
+                document.body.removeEventListener('keyup', handleKey);
+            }
+            if (handleKeyDown) {
+                document.body.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+
+        ctrl.config = function(element, isInitialized, context) {
+            if (!isInitialized) {
+                handleKey = function(e) {
+                    if (e.keyCode == 27) { // escape key
+                        Modal.module(null);
+                        m.redraw();
+                    }
+                };
+                document.body.addEventListener('keyup', handleKey);
+
+
+                document.body.removeEventListener('keydown', dialogHandleKeyDown);  // make sure there is only one.
+                document.body.addEventListener('keydown', dialogHandleKeyDown);
+            }
+        }
+    };
+
+
+    Modal.view = function(ctrl, args) {
+        args = args || {};
+        return [
+            m(".modal", {
+                config: ctrl.config,
+                class: [
+                    Modal.module() ? "modal-visible" : "",
+                    args.class
+                ].join(" "),
+            }, [
+                m(".modal-dialog.card.card-2", {config: updateMdl}, [
+                    m("a.modal-close", {onclick: bind(Modal.module, null) }, "×"),
+                    subview(args)
+                ])
+            ]),
+            m(".modal-overlay", {onclick: bind(Modal.module, null) })
+        ]
+    };
+
+    return Modal
+};
+
+// Check if the current dialog has a keydown_handler configured and If so call this handler.
+// This whole modal thing here sucks. I don't understand the lifecycle and this was the only way I managed to register
+// a key handler for dialogs.
+function dialogHandleKeyDown(e) {
+    if (Modal.current_dialog && Modal.current_dialog.keydown_handler) {
+        Modal.current_dialog.keydown_handler(e);
+    }
+};

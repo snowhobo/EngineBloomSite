@@ -1,0 +1,13 @@
+var glyphs_toolbar = {
+
+    view: function () {
+        var cur_font = fonts_module.current_font();
+        return m("div.calli-toolbar", [
+
+                cur_font ? m("a[href='/" + fonts_module.urlPath + "/" + cur_font.id + "'].calli-toolbar-link",
+                    {config: m.route}, pl.t('back_to_fontname', {fontname: cur_font.name})
+                ) : null,
+        ])
+
+    }
+};

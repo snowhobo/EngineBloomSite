@@ -1,0 +1,95 @@
+// Originally this was only a unicode picker. Later the option to add characters with the input (typein) was added.
+var UnicodePicker = {
+
+    selected_table_id: m.prop(0),
+    add_handler: null,  // function which will be called with the character a user clicks.
+    disabled_chars: [],  // Chars to show in a disabled/already selected style.
+    typein_chars: m.prop(""),
+
+    controller: function (args) {
+        UnicodePicker.add_handler = args.add_handler;
+        UnicodePicker.disabled_chars = args.disabled_chars.slice();
+        // UnicodePicker.typein_chars("");
+    },
+
+    add: function(char) {
+        UnicodePicker.add_handler(char);
+        UnicodePicker.disabled_chars.push(char);
+    },
+
+    addTypeinChars: function() {
+        var new_chars = UnicodePicker.typein_chars().trim();
+        // console.log(new_chars.length, new_chars);
+        if (new_chars.length) {
+            templates_module.add_glyphs(splitUnicode(new_chars));
+            // splitUnicode(new_chars).map(function (item) {
+            //     console.log(item);
+            //     UnicodePicker.add_handler(item);
+            // });
+            UnicodePicker.typein_chars('')
+        }
+    },
+
+    view: function () {
+        // var start = unicode_range[UnicodePicker.selected_table_id()].r[0];
+        // var end = unicode_range[UnicodePicker.selected_table_id()].r[1];
+        // var rng = range_from_to(start, end);
+        var rng = uniqueArraySorted(
+            unicode_range[UnicodePicker.selected_table_id()].l);
+
+        return [
+            m('h3', pl.t('Arbitrary characters')),
+
+            m('#unipicker-typein-wrap', [
+                m('label', {for: "unicode-picker-typein-area", style: {display: 'block'}},
+                    pl.t('Type or copy & paste new characters:')),
+                m('textarea#unicode-picker-typein-area',
+                    {
+                        type: "text", maxlength: '500',
+                        spellcheck: false,
+                        onchange: m.withAttr('value', UnicodePicker.typein_chars)
+                    },
+                    UnicodePicker.typein_chars()
+                ),
+                m("#unicode-picker-typein-buttons", [
+                    m("button[type=button].mdl-button.mdl-js-button.mdl-button--primary",
+                        {onclick: UnicodePicker.addTypeinChars()},
+                        pl.t('Add')),
+                    m("button[type=button].mdl-button.mdl-js-button",
+                        {onclick: function() {UnicodePicker.typein_chars("")}},
+                        pl.t('Clear'))
+                ])
+            ]),
+            m('#unipicker-table-selection-wrap',
+                [
+                    m('label', {for: "unicode-picker-typein", style: {display: 'block'}},
+                        pl.t('Or use the selector:')),
+                    m("select#table-selector",
+                        {onchange: m.withAttr('value', UnicodePicker.selected_table_id)},
+                        [
+                            unicode_range.map(function (item, index) {
+                                var title = item.t;
+                                return m("option",
+                                    {value: index}, title);
+                            })
+                        ])
+                ]),
+
+            m('#unipicker-chars-wrap', [
+                rng.map(function (c) {
+                    var char = String.fromCharCode(c);
+
+                    var is_disabled = UnicodePicker.disabled_chars.indexOf(char) !== -1;
+                    return m(
+                        ".unipicker-char-wrap.card.card-1"+ (is_disabled ? '.disabled' : '.clickable'),
+                        is_disabled ? {} : { onclick: UnicodePicker.add.bind(this, char) },
+                        char
+                    );
+                })
+            ])
+
+
+        ]
+
+    }
+};

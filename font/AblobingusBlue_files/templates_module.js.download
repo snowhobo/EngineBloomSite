@@ -1,0 +1,123 @@
+var templates_module = {
+    urlPath: "templates",
+    label: pl.t("Templates"),
+
+    // icon_key: "grid_on",
+
+    glyphs: m.prop([]),
+    // ligas: m.prop([]),
+
+    new_glyphs: [],     // holds newly added glyphs so wen can highlight them for a moment.
+
+    update_current_units: function() {
+        // Load the glyphs from the currentTemplate list.
+        return CurrentTemplate.list().then(function(glyphs) {
+            templates_module.glyphs(glyphs);
+            return glyphs;
+        });
+    },
+
+    add_single_glyph: function(c) {
+        templates_module.add_glyphs([c]);
+    },
+
+    add_glyphs: function( chars_list_to_add ) {
+
+        chars_list_to_add = uniqueArray(chars_list_to_add);
+
+        // todo2: create a commonly used method for acceptable chars.
+        chars_list_to_add.map(function(item) {
+            item = item.replace( /[\0-\x1F]/g, "")   // remove controll chars
+                .replace(/\s/g, "")                 // remove whitespace
+        });
+
+        templates_content.working = true;
+        m.redraw();
+        chars_list_to_add = chars_list_to_add.filter(function(item){
+            if (item.trim() === "" ) {
+                // happens if a collection is clicked two times
+                templates_content.working = false;
+                return false;
+            }
+            return true;
+        });
+
+        templates_module.new_glyphs = chars_list_to_add;    // remember for highlighting.
+
+        return CurrentTemplate.list().then(function(current_glyphs) {
+            // Weed out all already existing chars
+            var current_glyphs_chars = current_glyphs.map(function(a) {return a.unit;});
+            var new_glyphs  = chars_list_to_add.filter(function(item) {
+                return current_glyphs_chars.indexOf(item) < 0;
+            });
+
+
+            // todo: remove this breadcrumb if "ConstraintError: Unable to add key to index 'unit': at least one key does not satisfy the uniqueness requirements." is fixed
+            try {
+                window.jsLogger && window.jsLogger.debug("add_glyphs()", {
+                    new_glyphs: new_glyphs,
+                    current_glyphs: current_glyphs_chars
+                });
+            }
+            catch (e) {
+                console.log("error breadcumbing in update_clientdb_from_server_response()", e)
+            }
+
+
+
+            // add to db
+            return CurrentTemplate.addAllChars(new_glyphs).then(function() {
+                return templates_module.update_current_units().then(function() {
+                    templates_content.working = false;
+                    m.redraw();
+                });
+
+            });
+        });
+
+
+    },
+
+    removeAll: function() {
+        show_are_your_sure_dialog({
+            text: pl.t('Do you want to remove all currently selected characters?'),
+            button_label: pl.t('Remove all'),
+            dontaskagain_key: 'template_delete_selected_characters',
+            action_function: function() {
+                CurrentTemplate.truncate().then(function() {
+                    templates_module.update_current_units().then(m.redraw);
+                });
+            }
+        });
+
+        // Modal.module(AreYouSureDialog, {
+        //     text: pl.t('Do you want to remove all currently selected characters?'),
+        //     button_label: pl.t('Remove all'),
+        //     dontaskagain_key: 'template_delete_selected_characters',
+        //     action_function: function() {
+        //         CurrentTemplate.truncate().then(function() {
+        //             templates_module.update_current_units().then(m.redraw);
+        //         });
+        //     }
+        // });
+
+
+    },
+
+    remove_glyph: function(liga) {
+        CurrentTemplate.delete(liga.id).then(function(index) {
+            // templates_module.ligas().splice(index, 1);
+            templates_module.update_current_units().then(m.redraw);
+        });
+
+    },
+
+
+    // components
+    sidedrawer: templates_sidedrawer,
+    content: templates_content,
+    toolbar: templates_toolbar,
+    footer_right: templates_footer_right,
+};
+
+modules[templates_module.urlPath] = templates_module;

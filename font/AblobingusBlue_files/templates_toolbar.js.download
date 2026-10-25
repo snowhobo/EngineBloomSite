@@ -1,0 +1,78 @@
+var templates_toolbar = {
+
+
+    view: function () {
+        return m('div', [
+            // m("#calli-toolbar-icons", [
+            //     m('button.mdl-button.mdl-js-button.mdl-button--icon',
+            //         {
+            //             onclick: templates_module.glyphs().length > 0
+            //                 ? templates_module.removeAll.bind(this)
+            //                 : function () {
+            //                 },
+            //             title: pl.t('Remove all characters and ligatures.'),
+            //             disabled: templates_module.glyphs().length === 0
+            //         },
+            //         m('i.material-icons' + (templates_module.glyphs().length > 0 ? '.md-dark' : ''), 'delete'))
+            // ]),
+            m(".calli-toolbar", [
+
+                build_toolbar_link(
+                    pl.t('Download Template'),
+                    {onclick: templates_module.glyphs().length === 0 ? null : Modal.module.bind(this, BuildTemplate)},
+                    {disabled: templates_module.glyphs().length === 0, id: "calli-toolbar-template-download"}
+                ),
+
+                build_toolbar_link(pl.t("Arbitrary characters"),
+                    {
+                        onclick: Modal.module.bind(this, UnicodePicker,
+                            {
+                                add_handler: templates_module.add_single_glyph,
+                                // get the characters as array from the array of glyph objects and set them as disabled.
+                                disabled_chars: templates_module.glyphs().map(function (g) {
+                                    return g.unit
+                                })
+                            })
+                    }),
+
+                build_toolbar_link(
+                    pl.t("Arbitrary Ligatures"),
+                    window.fe_user.is_upgraded
+                        ? {onclick: Modal.module.bind(this, AddLigatureModal)}
+                        : {title: pl.t('Ligatures are only available in the Pro version.')},
+                    !window.fe_user.is_upgraded
+                        ? { disabled: true, }
+                        : {}
+                ),
+
+                build_toolbar_link(
+                    pl.t('Remove all'),
+                    {onclick: templates_module.glyphs().length === 0 ? null : templates_module.removeAll.bind(this)},
+                    {disabled: templates_module.glyphs().length === 0, title: pl.t('Remove all characters and ligatures.')}
+                ),
+
+                // templates_module.glyphs().length
+                // ? build_toolbar_link("Remove all", {onclick: templates_module.removeAll.bind(this)})
+                // : null,
+
+                // m("button.mdl-button.mdl-js-button.mdl-button--icon[id='demo-menu-lower-right']", [
+                //     m("i.material-icons.md-dark", "more_vert")]),
+                //
+                //
+                // m("ul.mdl-menu.mdl-menu--bottom-right.mdl-js-menu.mdl-js-ripple-effect[for='demo-menu-lower-right']", [
+                //     m("li.mdl-menu__item" ,
+                //         {
+                //             onclick: templates_module.glyphs().length > 0
+                //                 ? templates_module.removeAll.bind(this)
+                //                 : function() {},
+                //             disabled: templates_module.glyphs().length==0
+                //         },
+                //         "Remove all Characters"
+                //     ),
+                //
+                // ])
+
+            ])
+        ])
+    }
+};

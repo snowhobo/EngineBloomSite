@@ -1,0 +1,32 @@
+/* global __pixit, m */
+
+__pixit.icon = {
+  /**
+   * Show a material design icon along with a tooltip
+   *
+   * @param {object} ctrl
+   * @param {{icon: string,
+   * class: string,
+   * click: function,
+   * title: string,
+   * for: string,
+   * isSelected: boolean,
+   * disabled: boolean,
+   * isBtn: boolean}} args
+   * @return {VirtualDomEl}
+   */
+  view: function view(ctrl, args) {
+    return m('.icon', [
+      m(
+        'i.material-icons.click' + (args.isBtn ? '' : '.md-36'),
+        {
+          id: args.icon,
+          class: (args.class ? args.class : '') + (args.isSelected ? ' selected' : ''),
+          onclick: args.click
+        },
+        args.icon
+      ),
+      args.disabled ? null : m('.mdl-tooltip.mdl-tooltip--large', { for: args.for }, args.title)
+    ]);
+  }
+};

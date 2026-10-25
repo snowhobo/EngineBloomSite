@@ -1,0 +1,328 @@
+(function () {
+    // Deduplication state
+    const lastErrorKeys = [];
+
+    const lastErrorKeysLength = 5
+
+    function createRateLimiter(maxRequests, timeWindow) {
+        const requestLog = [];
+
+        return function shouldLogError() {
+            const now = Date.now();
+            // Remove expired requests
+            while (requestLog.length && now - requestLog[0] > timeWindow * 1000) {
+                requestLog.shift();
+            }
+            if (requestLog.length < maxRequests) {
+                requestLog.push(now);  // Register this request
+                return true;           // Allow logging
+            }
+            return false;              // Deny logging
+        };
+    }
+
+    const shouldLogError = createRateLimiter(5, 10);
+
+    function getCookie(name) {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    function generateErrorKey(type, message, filename, lineno, colno, stack) {
+        return `${type}-${message}-${filename}-${lineno}-${colno}-${stack}`;
+    }
+
+    function isDuplicateError(key) {
+        return lastErrorKeys.includes(key);
+    }
+
+    function updateErrorKeys(key) {
+        if (!isDuplicateError(key)) {
+            lastErrorKeys.push(key);
+            // Keep only the last 5 error keys
+            if (lastErrorKeys.length > lastErrorKeysLength) {
+                lastErrorKeys.shift();  // Remove the oldest key
+            }
+        }
+    }
+
+
+    function  logError(type, message, filename = null, lineno = null, colno = null, stack = null) {
+        try {
+            if (
+                (message === "Script error." && navigator.userAgent.indexOf("Safari") !== -1 )
+                || message === "TypeError: undefined is not an object (evaluating 'a.L')"   // google translate error
+                || ( filename !== null && typeof filename === 'string'
+                    && (filename.startsWith("moz-extension:") || filename.startsWith("chrome-extension:") ) )
+            ) {
+                return;
+            }
+
+            // Deduplication check
+            const currentErrorKey = generateErrorKey(type, message, filename, lineno, colno, stack);
+            if (isDuplicateError(currentErrorKey)) {
+               return;  // Skip sending the same error
+            }
+            // Update the last error keys for deduplication tracking
+            updateErrorKeys(currentErrorKey);
+
+            // Get crsf token
+            const cookie = getCookie('csrftoken')
+
+            // Prepare data
+            const data = {
+                type: type,
+                message: message,
+                filename: filename,
+                lineno: lineno,
+                colno: colno,
+                stack: stack,
+                breadcrumbs: JSON.stringify(window.jsLogger.getBreadcrumbs()),
+                context: JSON.stringify(window.jsLogger.context)
+            }
+
+            // Send data
+            const body = new FormData()
+            for (const key in data) {
+                body.append(key, data[key])
+            }
+
+            fetch(window.jsLogUrl, {
+                method: 'POST', headers: {
+                    'X-CSRFToken': cookie
+                }, credentials: 'include', body
+            })
+                .then(response => {
+                })
+                .catch(error => {
+                });
+        } catch (ex) {
+            console.log(ex);
+        }
+    }
+
+    // monitor-js-errors
+    window.addEventListener('error', e => {
+        try {
+            const {message, filename, lineno, colno, error} = e;
+            if (shouldLogError()) {
+                logError("error", message, filename, lineno, colno, error?.stack);
+            }
+        } catch (ex) {
+            console.log(ex);
+        }
+    });
+
+    // monitor-unhandled-rejections
+    window.addEventListener('unhandledrejection', function (e) {
+        try {
+            if (shouldLogError()) {
+                let message, filename, lineno, colno, stack;
+                
+                // Extract error details based on the type of reason
+                if (e.reason instanceof Error) {
+                    // Handle standard Error objects
+                    message = e.reason.message || "Unknown error";
+                    stack = e.reason.stack;
+                    
+                    // Extract filename, line and column from stack trace if available
+                    if (stack) {
+                        const stackLines = stack.split('\n');
+                        if (stackLines.length > 1) {
+                            // Parse the first line with location info (usually the second line)
+                            const locationLine = stackLines.find(line => line.includes('at '));
+                            if (locationLine) {
+                                const match = locationLine.match(/at\s+(?:\w+\s+)?\(?(.+):(\d+):(\d+)/);
+                                if (match) {
+                                    filename = match[1];
+                                    lineno = parseInt(match[2], 10);
+                                    colno = parseInt(match[3], 10);
+                                }
+                            }
+                        }
+                    }
+                } else if (typeof e.reason === 'object' && e.reason !== null) {
+                    // Handle non-Error objects
+                    try {
+                        // Try to extract useful properties
+                        const errorProps = {};
+                        // Include only non-circular properties
+                        Object.keys(e.reason).forEach(key => {
+                            try {
+                                const value = e.reason[key];
+                                if (typeof value !== 'function' && typeof value !== 'object') {
+                                    errorProps[key] = value;
+                                } else if (value !== null && typeof value === 'object') {
+                                    errorProps[key] = '[Object]';
+                                }
+                            } catch (ex) {
+                                errorProps[key] = '[Circular Reference]';
+                            }
+                        });
+                        message = JSON.stringify(errorProps);
+                    } catch (jsonError) {
+                        message = "Unserializable object: " + Object.prototype.toString.call(e.reason);
+                    }
+                } else {
+                    // Handle primitive values
+                    message = String(e.reason);
+                }
+                
+                // Add current URL to the context
+                window.jsLogger.addContext('error_url', window.location.href);
+                
+                // Log the enhanced error
+                logError("unhandledrejection", message, filename, lineno, colno, stack);
+            }
+        } catch (ex) {
+            console.log("Error in unhandledrejection handler:", ex);
+        }
+    });
+
+    // monitor-resource-load-error
+    function monitorResourceLoadError() {
+        function listenForLoadError(node) {
+            if (["SCRIPT", "LINK", "IMG"].indexOf(node.tagName) >= 0) {
+                var origOnError = node.onerror;
+                node.onerror = function (evt) {
+                    if (!evt || !evt.srcElement) {
+                        return;
+                    }
+                    logError("res-load-error", evt.srcElement.src);
+                    if (origOnError) {
+                        origOnError.call(node, evt);
+                    }
+                }
+            }
+        }
+        let Observer = window.MutationObserver || window.WebKitMutationObserver;
+        if (!Observer) {
+            return;
+        }
+        new Observer((function (mutations) {
+            [].forEach.call(mutations, function (mutation) {
+                [].forEach.call(mutation.addedNodes, listenForLoadError);
+            });
+        })).observe(document, {childList: true, subtree: true});
+    }
+
+    // Monitor Clicks and Inputs
+    function trackClicksAndInputs() {
+        document.addEventListener('click', event => {
+            const target = event.target;
+            if (target) {
+                const tagName = target.tagName.toLowerCase();
+                const message = `Click: ${tagName} ${target.id ? `#${target.id}` : ""} ${target.className ? `.${target.className}` : ""}`;
+                window.jsLogger.addBreadcrumb(message, { type: "click", target: target.outerHTML });
+            }
+        });
+
+        document.addEventListener('input', event => {
+            const target = event.target;
+            if (target && target.tagName.toLowerCase() !== "password") {
+                const message = `Input: ${target.tagName.toLowerCase()} ${target.id || ""} ${target.value || ""}`;
+                window.jsLogger.addBreadcrumb(message, { type: "input", value: target.value });
+            }
+        });
+    }
+
+    // Monitor Navigation Changes
+    function trackNavigation() {
+        let lastUrl = window.location.href;
+
+        window.addEventListener('popstate', () => {
+            const currentUrl = window.location.href;
+            window.jsLogger.addBreadcrumb(`Navigation: Back/Forward to ${currentUrl}`, {
+                from: lastUrl, to: currentUrl
+            });
+            lastUrl = currentUrl;
+        });
+
+        ['pushState', 'replaceState'].forEach(method => {
+            const original = history[method];
+            history[method] = function (...args) {
+                const result = original.apply(this, args);
+                const currentUrl = window.location.href;
+                window.jsLogger.addBreadcrumb(`Navigation: ${method} to ${currentUrl}`, {
+                    from: lastUrl, to: currentUrl
+                });
+                lastUrl = currentUrl;
+                return result;
+            };
+        });
+    }
+
+    function monitorVisibility() {
+        document.addEventListener('visibilitychange', function(ev) {
+            window.jsLogger.addBreadcrumb(`Tab state : ${document.visibilityState}`);
+        });
+    }
+
+    // Initialize Tracking
+    trackClicksAndInputs();
+    trackNavigation();
+    //monitorResourceLoadError();
+    monitorVisibility();
+
+})()
+
+class JsLogger {
+    constructor(context = {}, maxBreadcrumbs = 12) {
+        this.breadcrumbs = [];
+        this.maxBreadcrumbs = maxBreadcrumbs;
+        this.context = context;
+    }
+
+    addContext(key, value) {
+        this.context[key] = value;
+    }
+
+    addBreadcrumb(message, extraData) {
+        let extraInfo = null;
+
+        if (extraData && typeof extraData === 'object') {
+            try {
+                extraInfo = JSON.stringify(extraData);
+                // prevent to long values
+                if (extraInfo.length > 1000) {
+                    extraInfo = '["Extra data too long"]';
+                }
+            } catch (e) {
+                extraInfo = '["Invalid extra data"]';
+            }
+        }
+
+        const timestamp = new Date().toISOString();
+        const formattedMessage = `${timestamp}: ${message} ${extraInfo}`;
+
+        // Add the new message and ensure size limit
+        this.breadcrumbs.push(formattedMessage);
+        if (this.breadcrumbs.length > this.maxBreadcrumbs) {
+            this.breadcrumbs.shift();  // Remove the oldest message
+        }
+    }
+
+    getBreadcrumbs() {
+        const breadcrumbsCopy = [...this.breadcrumbs];
+        this.breadcrumbs = [];  // Clear messages after retrieval
+        return breadcrumbsCopy;
+    }
+
+    debug(message, extraData) {
+        this.addBreadcrumb("DEBUG: " + message, extraData);
+    }
+
+    info(message, extraData) {
+        this.addBreadcrumb("INFO: " + message, extraData);
+    }
+
+    warn(message, extraData) {
+        this.addBreadcrumb("WARN: " + message, extraData);
+    }
+
+    error(message, extraData) {
+        this.addBreadcrumb("ERROR: " + message, extraData);
+    }
+}
+
+window.jsLogger = new JsLogger();

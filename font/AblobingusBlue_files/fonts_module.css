@@ -1,0 +1,165 @@
+.exceeding-list { max-height: 30px; overflow: auto;}
+#page-content-fonts ul#glyphs-list { list-style: none; }
+
+#page-content-fonts ul#glyphs-list li,
+#page-content-fonts ul#ligas-list li { display: inline-block; background-color: white; margin-right: 1em;
+    margin-bottom: 1em; position: relative; vertical-align: middle; overflow: hidden;
+}
+
+
+#page-content-fonts ul#ligas-list li { min-width: 140px; }
+#page-content-fonts ul#ligas-list li img { max-height: 120px; display: block;}
+
+#page-content-fonts li.card.card-1:hover { box-shadow: 0 1px 8px rgba(103,58,183,0.42), 0 1px 5px rgba(103,58,183,0.74);}
+
+#page-content-fonts ul#glyphs-list li img,
+#page-content-fonts ul#glyphs-list .no-variant  { width: 100px; display: block;}
+
+#page-content-fonts .no-variant {
+    background: url('../img/placeholder.png') no-repeat;
+    background-size: 100% 100%;
+    height: 120px;
+    display: block;
+}
+
+
+/* Glyph Box Overlay Icons/Texts */
+#page-content-fonts .glyph-name { position: absolute; left: 2px; top: 1px;
+    font-family: 'noto_sans_uiregular', sans-serif; font-size: 21px; color: #aaa}
+#page-content-fonts .icon-delete-glyph { position: absolute; bottom: -3px; right: -5px;}
+#page-content-fonts .glyph-counter { background-color: rgba(44,44,44, 0.1); align-items: center; position: absolute;
+    top: 3px; font-size: 12px; width: 22px; height: 22px; border-radius: 50%; display: flex;  flex-direction: row;
+    flex-wrap: wrap; justify-content: center; align-content: center; z-index: 9; right: 2px; }
+
+
+/**/
+#upload-template-result .mdl-radio { margin-right: 2em;}
+#upload-template-result { width: 980px;}
+
+
+/* FONT CREATE PREVIW */
+
+a.result-font-link { font-weight: bold; display: inline-block; margin-right: 1em; font-size: 120%;}
+#create-font-result { width: 980px;}
+.font-preview-sizeable { line-height: 1.65em; }
+.font-preview-tab { height: 400px; overflow-y: scroll; }
+.font-preview{ font-family: "PreviewFont", "adobe_notdefregular";
+    font-kerning: normal;
+    font-variant-ligatures: contextual common-ligatures;
+    -moz-font-feature-settings: "kern", "calt", "liga";
+    -ms-font-feature-settings: "kern", "calt", "liga";
+    -webkit-font-feature-settings: "kern", "calt", "liga";
+    font-feature-settings: "kern", "calt", "liga";
+
+
+}
+
+#front-preview-slider-wrap { width: 50%}
+
+#preview-glyphlist { margin-top: 1em; max-height: 439px; overflow: auto; }
+#preview-glyphlist .preview-glyphlist-item .glyph-fullsize-wrap {
+    position:fixed;
+    visibility: hidden;
+    opacity: 0;
+    left: 50%;
+    top:-30px;
+    transform: translate(-50%, -100%);
+    transition: visibility 0s linear 0.2s,opacity 0.2s linear;
+    z-index: 9999;
+}
+#preview-glyphlist .preview-glyphlist-item:hover .glyph-fullsize-wrap {
+     visibility: visible;
+    opacity: 1;
+}
+
+#preview-glyphlist .preview-glyphlist-item img.glyph-thumb { max-width: 80px; }
+#preview-glyphlist .preview-glyphlist-item img.glyph-thumb.ligature { max-width: 160px; }
+
+#preview-glyphlist .preview-glyphlist-item { display:inline-block; margin: 0 10px 10px 0;; }
+
+#preview-glyphlist .preview-glyphlist-item .glyph-info {position: absolute; bottom: 0; left: 2px;}
+#preview-glyphlist .preview-glyphlist-item .icon-delete-glyph {position: absolute; top: -2px; right: -2px;}
+
+#size-comparison .size-compare-item { display: inline-block; margin: 4px 10px 10px 2px; padding: 2px;}
+#size-comparison .size-compare-item .serif { font-family: serif}
+#size-comparison .size-compare-item .sans { font-family: sans-serif}
+
+
+.font-preview-usage-hint { margin-top: 1em; margin-bottom: 1em; }
+
+ul#font-downloads li { display: inline-block;  }
+
+#font-preview-bad-result-hint {margin-top: 2em;}
+
+
+
+/* SET GLYPH ADVANCE DIALOG */
+/* This will obsolte if the new SetBearings Dialog is active. */
+#set-advance-tool-wrap {  position: relative;}
+#set-advance-image { width: 100%;}
+#set-advance-image-slider { width: 100%;}
+#set-advance-image-cursor { position: absolute; top:0; border: 1px solid teal; width: 140px; bottom: 25px;
+    background-color: rgba(200,200,200,0.5);}
+
+
+/* MODAL UPLOAD TEMPLATE */
+
+.form.upload-templates-files .files { margin-top: 1em;}
+.form.upload-templates-files .files .a-file { margin-bottom: 0.5em;}
+.form.upload-templates-files .material-icons.delete-file-icon { vertical-align: middle; font-size: 18px; }
+.form.upload-templates-files .files { min-height: 50px}
+
+ul#preview-glyphlist { line-height: 16px; padding: 0; margin: 1em 0 2em 0; max-height: 420px; overflow-y: auto;
+    width: 800px;}
+ul#preview-glyphlist li { list-style: none; display: inline-block; position: relative; margin: 0 10px 10px 0;
+    vertical-align: middle; text-align: center; max-width: 200px;}
+ul#preview-glyphlist li img { max-width: 100%}
+
+ul#preview-glyphlist li .glyph-info { position: absolute; bottom: 0; left: 0;
+    font-family: noto_sans_uiregular, sans-serif; margin:0; }
+
+ul#preview-glyphlist li .icon-delete-glyph { position: absolute; top: 1px; right: 1px;}
+
+ul#preview-glyphlist li:hover {background-color: rgb(100,255,218);}
+ul#preview-glyphlist li:hover img {opacity: 0.5}
+
+
+
+/*SIDEDRAWER*/
+#drawer-fonts .mdl-list__item.active { background-color: #e0e0e0; }
+#drawer-fonts a.mdl-list__item  { text-decoration: none; cursor: pointer; }
+#drawer-fonts a.mdl-list__item:hover { background-color: #eeeeee}
+#drawer-fonts h5.mdl-list__item-primary-content {margin: 0; padding-left: 4px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; display: block}
+#drawer-fonts nav.mdl-navigation  { padding-top: 46px;}
+
+/*Edit font details dialog*/
+#style-selector-wrap { margin-bottom:0.75em;}
+#style-selector-select { padding: 0.1em 0.5em; display: block; font-size: 105%; margin-top:0.25em; background-color: #efefef;}
+#editfontform { width: 400px;  height: 680px; position: relative; margin: 0 }
+#editfontform #meta_panel .mdl-textfield { margin-bottom: 0; width: 380px;  }
+#editfontform-font-name {margin-bottom: 2em;}
+#style-selector-wrap label {    color: #aaa;}
+#editfontform .dialog-buttons { position: absolute; bottom:0; right:1.5em;}
+#editfontform textarea { resize: none; }
+
+#editfontform #meta_panel {position: relative}
+#metapanel-upgraded-only-overlay { position: absolute;top:0;left: 0;width: 100%;height: 100%;
+    background-color: rgba(255,255,255,0.75); z-index: 999}
+
+#metapanel-upgraded-only-content { position: absolute;top:45%;left:50%; transform: translate(-50%, -50%); width: 300px;
+    text-align: center; font-size: 130%; line-height: 130%}
+
+#main_panel .slider-wrap { margin-bottom: 3em;}
+
+/* Share font dialog */
+#open-share-dialog-button {float: right;}
+#share-font-dialog #share-preview { font-size: 38px; line-height: 38px;}
+#share-font-dialog { width: 800px; }
+#share-font-dialog #share-preview { width: 100%; padding: 1em; text-align: center; min-height:100px; }
+#share-font-dialog #share-start-buttons-wrap { margin-top: 2em; }
+#share-font-dialog .sharing-button-network { width: 64px; }
+#share-font-dialog #share-textarea { margin-top: 0.5em; padding: 0.5em; text-align: center; font-size: 35px; line-height: 36px; width: 100%}
+
+.sharing-button-network { margin-right:0; margin-left: 1em;}
+.sharing-button-network svg {stroke: white; fill: white;}

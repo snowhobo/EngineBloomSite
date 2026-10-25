@@ -1,0 +1,53 @@
+var script_charsets = [
+  {
+    "comment": "https://github.com/adobe-type-tools/adobe-latin-charsets",
+    "name": "Adobe Latin 1",
+    "desc": "Covers major Western European Latin languages.",
+    "languages": "Afrikaans, Basque, Breton, Catalan, Danish, Dutch, English, Faroese, Finnish, French, Gaelic, German, Icelandic, Indonesian, Irish, Italian, Javanese(Latin), Malay(Latin), Norwegian, Portuguese, Sami(Southern), Spanish, Swahili, Swedish, and Walloon.",
+    "glyphs": "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŁłŒœŠšŸŽžƒˆˇ˘˙˚˛˜˝–—‘’‚“”„†‡•…‰‹›⁄€™−"
+  },
+  {
+    "name": "Adobe Latin 2",
+    "desc": "Minimum for Western language Standard fonts.",
+    "languages": "Afrikaans, Basque, Breton, Catalan, Danish, Dutch, English, Faroese, Finnish, French, Gaelic, German, Icelandic, Indonesian, Irish, Italian, Javanese(Latin), Malay(Latin), Norwegian, Portuguese, Sami(Southern), Spanish, Swahili, Swedish, and Walloon.",
+    "glyphs": "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿıŁłŒœŠšŸŽžƒˆˇˉ˘˙˚˛˜˝π–—‘’‚“”„†‡•…‰‹›⁄€ℓ™Ω℮∂∆∏∑−∕∙√∞∫≈≠≤≥◊"
+  },
+  {
+    "name": "Adobe Latin 3",
+    "desc": "Minimum character set for Western Pro fonts.",
+    "languages": "Afrikaans, Basque, Breton, Catalan, Danish, Dutch, English, Faroese, Finnish, French, Gaelic, German, Icelandic, Indonesian, Irish, Italian, Javanese(Latin), Malay(Latin), Norwegian, Portuguese, Sami(Southern), Spanish, Swahili, Swedish, Walloon, Croatian(Latin), Czech, Estonian, Gagauz(Latin), Hungarian, Kashubian, Latvian, Lithuanian, Moldovan(Latin), Polish, Romanian(Latin), Sami(Northern, Inari, and Lule), Serbian(Latin), Silesian, Sorbian, Slovak, Slovenian and Turkish",
+    "glyphs": "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿĀāĂăĄąĆćČčĎďĐđĒēĖėĘęĚěĞğĢģĪīĮįİıĶķĹĺĻļĽľŁłŃńŅņŇňŌōŐőŒœŔŕŖŗŘřŚśŞşŠšŢţŤťŪūŮůŰűŲųŸŹźŻżŽžƒȘșȚțˆˇˉ˘˙˚˛˜˝π–—‘’‚“”„†‡•…‰‹›⁄€₺₽ℓ™Ω℮∂∆∏∑−∕∙√∞∫≈≠≤≥◊"
+  },
+  {
+    "name": "Modern Greek",
+    "desc": "Greek monotonic orthography.",
+    "glyphs": ".,;΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώ"
+  },
+  {
+    "name": "Ancient Greek",
+    "desc": "Greek polytonic orthography.",
+    "glyphs": " ͂̓̈́ͅʹ͵ͺ;΄΅Ά·ΈΉΊΌΎΏΐΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩΪΫάέήίΰαβγδεζηθικλμνξοπρςστυφχψωϊϋόύώϗἀἁἂἃἄἅἆἇἈἉἊἋἌἍἎἏἐἑἒἓἔἕἘἙἚἛἜἝἠἡἢἣἤἥἦἧἨἩἪἫἬἭἮἯἰἱἲἳἴἵἶἷἸἹἺἻἼἽἾἿὀὁὂὃὄὅὈὉὊὋὌὍὐὑὒὓὔὕὖὗὙὛὝὟὠὡὢὣὤὥὦὧὨὩὪὫὬὭὮὯὰάὲέὴήὶίὸόὺύὼώᾀᾁᾂᾃᾄᾅᾆᾇᾈᾉᾊᾋᾌᾍᾎᾏᾐᾑᾒᾓᾔᾕᾖᾗᾘᾙᾚᾛᾜᾝᾞᾟᾠᾡᾢᾣᾤᾥᾦᾧᾨᾩᾪᾫᾬᾭᾮᾯᾰᾱᾲᾳᾴᾶᾷᾸᾹᾺΆᾼ᾽ι᾿῀῁ῂῃῄῆῇῈΈῊΉῌ῍῎῏ῐῑῒΐῖῗῘῙῚΊ῝῞῟ῠῡῢΰῤῥῦῧῨῩῪΎῬ῭΅`ῲῳῴῶῷῸΌῺΏῼ´῾"
+  },
+  {
+    "name": "Adobe Cyrillic 1",
+    "desc": "Set for Std/Pro families with Cyrillic support.",
+    "languages": " Balkar, Belarusian(Cyrillic), Bulgarian2, Erzya, Karachay, Kumyk, Macedonian, Moksha, Nanai, Nogai, Russian, Rusyn, Serbian(Cyrillic) and Ukrainian.",
+    "glyphs": "ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџѢѣѲѳѴѵҐґ₴₽№"
+  }
+,
+  {
+    "name": "Adobe Cyrillic 2",
+    "desc": "Extended Cyrillic character set.",
+    "languages": "Abaza, Adyghe, Agul, Avar, Bashkir, Buryat, Chechen, Chuvash, Crimean Tatar(Cyrillic), Dargin, Dungan, Ingush, Kabardian, Kalmyk, Karakalpak, Kazakh, Khinalugh, Komi, Kyrgyz(Cyrillic), Lak, Lezgian, Moldovan(Cyrillic), Mongolian(Cyrillic), Ossetian, Rutul, Tabasaran, Tajik, Tat, Tatar, Turkmen, Tuvan, Uyghur(Cyrillic) and Uzbek(Cyrillic).",
+    "glyphs": "ЀЁЂЃЄЅІЇЈЉЊЋЌЍЎЏАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяѐёђѓєѕіїјљњћќѝўџѢѣѲѳѴѵҐґҒғҖҗҘҙҚқҠҡҢңҪҫҮүҰұҲҳҶҷҺһӀӁӂӏӐӑӔӕӖӗӘәӢӣӦӧӨөӮӯӲӳ₮₴₸₽№"
+  }
+
+
+
+];
+
+
+
+
+
+

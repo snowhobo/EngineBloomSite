@@ -1,0 +1,9 @@
+var templates_footer_right = {
+
+    view: function () {
+        return templates_module.glyphs() && templates_module.glyphs().length > 0
+            ? m('span', pl.t("# Glyphs:") + ' ' + templates_module.glyphs().length )
+            : m('span', '' )
+
+    }
+};

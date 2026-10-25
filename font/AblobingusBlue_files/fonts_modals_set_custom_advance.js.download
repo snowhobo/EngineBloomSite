@@ -1,0 +1,290 @@
+// Old deprecated Dialog
+// New one is glyphs_modals_set_bearings.js
+
+var SetAdvanceForm = {
+    image_width: 150,
+
+    variant: m.prop(),
+    cropped_image_data_url: m.prop(),
+    real_img_width: m.prop(),
+
+
+    save: function () {
+        Variants.save(SetAdvanceForm.variant()).then(
+            function () {
+                fonts_module.update_current_glyphs().then(function () {
+                    return glyphs_content.update_variants_list();
+                }).then(function () {
+                    Modal.module(null);
+                    m.redraw(true);
+                });
+            }
+        );
+    },
+
+    controller: function (variant) {
+        SetAdvanceForm.variant(variant);
+
+        cropDataUrl(
+            "data:image/png;base64," + variant.image_base64,
+            function (img) {
+                SetAdvanceForm.cropped_image_data_url(img);
+                m.redraw(true);
+                // SetAdvanceForm.real_img_width( img.width);
+            })
+    },
+
+    reset_advance: function () {
+        SetAdvanceForm.variant().custom_advance = 0;
+        SetAdvanceForm.save();
+    },
+
+    view: function (ctrl) {
+        var advance_percent = SetAdvanceForm.variant().custom_advance;
+        var cursor_left = SetAdvanceForm.image_width + (SetAdvanceForm.image_width * advance_percent / 100);
+        var color = advance_percent == 0 ? '#cdcdcd' : '#b3d4fc';
+        return [
+            m('#set-advance-form',
+                [
+                    m("h3", pl.t('Adjust spacing')),
+
+                    m('#set-advance-tool-wrap',
+                        {style: {width: 2 * SetAdvanceForm.image_width + 'px'}},
+                        [
+                            m('#set-advance-image-wrap', {style: {width: SetAdvanceForm.image_width + 'px'}},
+                                SetAdvanceForm.cropped_image_data_url()
+                                    ? m("img#set-advance-image.glyph-thumb", {src: SetAdvanceForm.cropped_image_data_url()})
+                                    : build_centered_spinner(pl.t('Loading ...'))
+                            ),
+
+                            m('#set-advance-image-cursor',
+                                {
+                                    style: {
+                                        left: cursor_left + 'px',
+                                        'border-color': color
+                                    }
+                                }),
+
+                            m(__mdl_helper.slider, {
+                                id: 'set-advance-image-slider',
+                                label: null,
+                                val: set_get_for_property(SetAdvanceForm.variant(), 'custom_advance'),
+                                min: -100,
+                                max: 100,
+                                step: 1,
+                                showMinMax: false,
+                                showValue: false,
+                            }),
+
+                        ]),
+
+                    m(__mdl_helper.form_buttons,{
+                        action_func: SetAdvanceForm.save.bind(this),
+                        action_label: pl.t("Save"),
+                        additional_buttons:  [{
+                            action: SetAdvanceForm.reset_advance,
+                            label: pl.t('Use Default')
+                        }]
+                    })
+                ]
+            )
+        ]
+    }
+};
+
+function cropDataUrl(dataUrl, callback) {
+    var canvas = document.createElement('canvas');
+
+    var image = new Image();
+    image.onload = function () {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        var ctx = canvas.getContext("2d");
+
+        ctx.drawImage(image, 0, 0);
+        callback(cropImageFromCanvasToDataUrl(ctx, canvas));
+    };
+    image.src = dataUrl;
+}
+
+// naive, slow implementation, only good for a single, small image
+// todo2: there is a copy of this function in webapp/static/webapp/js/modules/glpyhs/glyphs_modals_set_bearings.js  . move to utils
+function cropImageFromCanvasToDataUrl(ctx, canvas) {
+    var w = canvas.width,
+        h = canvas.height,
+        pix = {x: [], y: []},
+        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height),
+        x, y, index;
+    for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+            index = (y * w + x) * 4;
+
+            if ( imageData.data[index + 3] > 0      // not a transparent pixel
+                && imageData.data[index + 0] === 0) {
+
+                pix.x.push(x);
+                pix.y.push(y);
+
+            }
+        }
+    }
+    pix.x.sort(function (a, b) {
+        return a - b
+    });
+    pix.y.sort(function (a, b) {
+        return a - b
+    });
+    var n = pix.x.length - 1;
+
+    w = pix.x[n] - pix.x[0] + 1;
+    h = pix.y[n] - pix.y[0] + 1;
+    var cut = ctx.getImageData(pix.x[0], pix.y[0], w, h);
+    canvas.width = w;
+    canvas.height = h;
+    ctx.putImageData(cut, 0, 0);
+
+    var r_image = canvas.toDataURL();
+    return r_image
+}
+
+var SetAdvanceForm = {
+    image_width: 150,
+
+    variant: m.prop(),
+    cropped_image_data_url: m.prop(),
+    real_img_width: m.prop(),
+
+
+    save: function () {
+        Variants.save(SetAdvanceForm.variant()).then(
+            function () {
+                fonts_module.update_current_glyphs().then(function () {
+                    return glyphs_content.update_variants_list();
+                }).then(function () {
+                    Modal.module(null);
+                    m.redraw(true);
+                });
+            }
+        );
+    },
+
+    controller: function (variant) {
+        SetAdvanceForm.variant(variant);
+
+        cropDataUrl(
+            "data:image/png;base64," + variant.image_base64,
+            function (img) {
+                SetAdvanceForm.cropped_image_data_url(img);
+                m.redraw(true);
+                // SetAdvanceForm.real_img_width( img.width);
+            })
+    },
+
+    reset_advance: function () {
+        SetAdvanceForm.variant().custom_advance = 0;
+        SetAdvanceForm.save();
+    },
+
+    view: function (ctrl) {
+        var advance_percent = SetAdvanceForm.variant().custom_advance;
+        var cursor_left = SetAdvanceForm.image_width + (SetAdvanceForm.image_width * advance_percent / 100);
+        var color = advance_percent == 0 ? '#cdcdcd' : '#b3d4fc';
+        return [
+            m('#set-advance-form',
+                [
+                    m("h3", pl.t('Adjust spacing')),
+                    m('p', "This is the old version of the 'Adjust spacing' dialog. With the new dialog you can adjust the left and the right side spacing of a character. For this character we still show the old one because you adjusted the spacing for this character. To switch to the new dialog click the 'Use default' button and reopen the dialog again."),
+                    m('#set-advance-tool-wrap',
+                        {style: {width: 2 * SetAdvanceForm.image_width + 'px'}},
+                        [
+                            m('#set-advance-image-wrap', {style: {width: SetAdvanceForm.image_width + 'px'}},
+                                SetAdvanceForm.cropped_image_data_url()
+                                    ? m("img#set-advance-image.glyph-thumb", {src: SetAdvanceForm.cropped_image_data_url()})
+                                    : build_centered_spinner(pl.t('Loading ...'))
+                            ),
+
+                            m('#set-advance-image-cursor',
+                                {
+                                    style: {
+                                        left: cursor_left + 'px',
+                                        'border-color': color
+                                    }
+                                }),
+
+                            m(__mdl_helper.slider, {
+                                id: 'set-advance-image-slider',
+                                label: null,
+                                val: set_get_for_property(SetAdvanceForm.variant(), 'custom_advance'),
+                                min: -100,
+                                max: 100,
+                                step: 1,
+                                showMinMax: false,
+                                showValue: false,
+                            })
+                        ]),
+
+                    m(__mdl_helper.form_buttons,{
+                        action_func: SetAdvanceForm.save.bind(this),
+                        action_label: pl.t("Save"),
+                        additional_buttons:  [{
+                            action: SetAdvanceForm.reset_advance,
+                            label: pl.t('Use Default')
+                        }]
+                    })
+                ]
+            )
+        ]
+    }
+};
+
+// function cropDataUrl(dataUrl, callback) {
+//     var canvas = document.createElement('canvas');
+//
+//     var image = new Image();
+//     image.onload = function () {
+//         canvas.width = image.width;
+//         canvas.height = image.height;
+//         var ctx = canvas.getContext("2d");
+//
+//         ctx.drawImage(image, 0, 0);
+//         callback(cropImageFromCanvasToDataUrl(ctx, canvas));
+//     };
+//     image.src = dataUrl;
+// }
+//
+// // naive, slow implementation, only good for a single, small image
+// function cropImageFromCanvasToDataUrl(ctx, canvas) {
+//     var w = canvas.width,
+//         h = canvas.height,
+//         pix = {x: [], y: []},
+//         imageData = ctx.getImageData(0, 0, canvas.width, canvas.height),
+//         x, y, index;
+//     for (y = 0; y < h; y++) {
+//         for (x = 0; x < w; x++) {
+//             index = (y * w + x) * 4;
+//
+//             if (imageData.data[index + 0] == 0) {
+//                 pix.x.push(x);
+//                 // pix.y.push(y);
+//             }
+//         }
+//     }
+//     pix.x.sort(function (a, b) {
+//         return a - b
+//     });
+//     // pix.y.sort(function (a, b) {
+//     //     return a - b
+//     // });
+//     var n = pix.x.length - 1;
+//
+//     w = pix.x[n] - pix.x[0] + 1;
+//     // h = pix.y[n] - pix.y[0] + 1;
+//     // var cut = ctx.getImageData(pix.x[0], pix.y[0], w, h);
+//     var cut = ctx.getImageData(pix.x[0], 0, w, h);
+//     canvas.width = w;
+//     canvas.height = h;
+//     ctx.putImageData(cut, 0, 0);
+//
+//     var r_image = canvas.toDataURL();
+//     return r_image
+// }

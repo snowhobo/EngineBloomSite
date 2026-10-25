@@ -1,0 +1,27 @@
+#unipicker-typein-wrap { width: 80%}
+
+#unicode-picker-typein-area { width: 100%; height: 60px}
+
+#unipicker-table-selection-wrap { margin-top:3em;}
+
+#unipicker-table-selection-wrap #table-selector {
+    padding: 0.5em;
+    font-size: 1em;
+    margin-bottom: 2em;
+}
+
+#unipicker-table-selection-wrap #table-selector option {
+    padding: 0.5em;
+    font-size: 1em;
+
+}
+
+#unipicker-chars-wrap { max-height: 380px; overflow: auto; width: 800px}
+
+.unipicker-char-wrap { display: inline-block; min-width: 2em; line-height: 2em; height: 2em; margin: 0.25em;
+    text-align: center; font-size: 2em; }
+
+.unipicker-char-wrap.disabled { background-color: #efefef; color: #7e7e7e}
+.unipicker-char-wrap.disabled:hover { color: #7e7e7e}
+
+#unicode-picker-typein-buttons button { float: right}

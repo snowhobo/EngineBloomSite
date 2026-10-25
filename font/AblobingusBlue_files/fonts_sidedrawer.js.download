@@ -1,0 +1,84 @@
+var fonts_sidedrawer = {
+
+
+    controller: function (args) {
+
+        // the following is currently kind of controller/loader for the whole font module.
+        fonts_sidedrawer.updateFontsList().then(function (result) {
+            if (result.length > 0) {        // todo2: what if no fonts are saved. will the "loading ..." stay indefietly? test this.
+                if (args.itemId) {
+                    // was a font selected via url param?
+                    var cur_sel_fonts = fonts_module.fonts().filter(function (obj) {
+                        return obj.id === args.itemId;
+                    });
+                    if (cur_sel_fonts.length === 1) {
+                        fonts_module.current_font_id(args.itemId);
+                    }
+                    else {
+                        fonts_module.current_font_id(undefined);
+                        // No font with the given id exists. Could be an outdated link.
+                        var msg = "fonts_sidedrawer.updateFontsList(): Unexpected length of " + cur_sel_fonts.length + " for font lookup for id " + args.itemId;
+                        window.jsLogger && window.jsLogger.info(msg);
+                        setTimeout(function () {
+                            show_toast(pl.t('The font you are looking for does not exist.'))
+                        }, 500);
+                    }
+                }
+
+                // select first font if no font is selected yet.
+                if (fonts_module.current_font_id() === undefined) {
+                    fonts_module.current_font_id(fonts_module.fonts()[0].id);
+                }
+
+                var cur_font = fonts_module.current_font();
+                Home.show_home_waiting_overlay();
+                fonts_module.switch_active_font(cur_font).then(function() {
+                    Home.hide_home_waiting_overlay();
+                    m.redraw(true);
+                });
+
+            }
+            m.redraw();
+        });
+
+    },
+
+    updateFontsList: function () {
+        return Fonts.list().then(function (result) {
+            fonts_module.fonts(result);
+            return result;
+        });
+    },
+
+    view_list: function () {
+        return m("div", [
+            fonts_module.fonts().map(function (font, index) {
+                var li_content = [
+                    m("h5.mdl-list__item-primary-content.font-list-item",font.name)
+                ];
+                var active = font.id === fonts_module.current_font_id() ? ".active" : "";
+                return index < window.gn_config.plan_limits.nr_fonts
+                    ? m("a[href='/" + fonts_module.urlPath + "/" + font.id + "'].mdl-list__item" + active,
+                        {config: m.route},
+                        li_content)
+                    : m('.mdl-list__item.disabled', {title: pl.t('font_disabled_max_free')}, li_content)
+            })
+        ])
+    },
+
+    view: function () {
+        if (typeof(fonts_module.fonts()) !== "undefined") {
+            if (fonts_module.fonts().length === 0) {
+                return m("p.sidedrawer-padded", pl.t('You haven\'t created any font yet'))
+            }
+            else {
+                return fonts_sidedrawer.view_list();
+            }
+        }
+        else {
+            return build_centered_spinner(pl.t('Loading fonts'));
+        }
+
+    }
+};
+

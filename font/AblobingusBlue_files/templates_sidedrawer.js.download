@@ -1,0 +1,185 @@
+var templates_sidedrawer = {
+    active_group: m.prop(),
+    characters_keys_sorted_by_value: Object.getOwnPropertyNames(cdlr.characters).sort(function (a, b) {
+        return cdlr.languages[a].localeCompare(cdlr.languages[b]);
+    }),
+    searchTerm: m.prop(""),
+
+    isSearchActive: function () {
+        return templates_sidedrawer.searchTerm().length >= 1;
+    },
+
+    controller: function () {
+
+        templates_sidedrawer.searchTerm('');
+
+        // Combine the different charsets configs to one structure with a common format.
+        // This makes presentation easier and also it enables to search the charsets.
+        var charsets = function () {
+            var r = [
+                {
+                    header: "Basics",
+                    items: Object.keys(starter_kit_templates).map(function (key) {
+                        var lang_str = pl.has('lang_name.'+key) ? pl.t('lang_name.'+key) : pl.t(key);
+                        return {
+                            name: pl.t("Minimal") + ' ' + lang_str,
+                            // desc: "Covers essential Characters.",
+                            glyphs: starter_kit_templates[key].split(""),
+                            search: lang_str,
+                            id: 'basics-'+slugify(key)
+
+                        }
+                    })
+                },
+                {
+                    header: "Common Scripts",
+                    items: script_charsets.map(function (charset) {
+                        return {
+                            name: pl.t(charset.name),
+                            desc: pl.t(charset.desc),
+                            glyphs: charset.glyphs.split(""),
+                            search: charset.name + charset.desc,
+                            id: 'common-'+slugify(charset.name)
+                        }
+                    })
+                },
+                {
+                    header: "Miscellaneous",
+                    items: misc_charsets.map(function (charset) {
+                        return {
+                            name: pl.t(charset.name),
+                            desc: pl.t(charset.desc),
+                            glyphs: Array.isArray(charset.glyphs) ? charset.glyphs : charset.glyphs.split(""),
+                            search: charset.name + charset.desc,
+                            id: 'misc-'+slugify(charset.name)
+                        }
+                    })
+                },
+                {
+                    header: "Languages",
+                    items: templates_sidedrawer.characters_keys_sorted_by_value.map(function (char_key) {
+                        return {
+                            name: pl.t('lang_name.'+char_key),  //cdlr.languages[char_key],
+                            glyphs: cdlr.characters[char_key].exemplar.concat(
+                                // create uppercase letters.
+                                cdlr.characters[char_key].exemplar.map(function (c) {
+                                    return c.toUpperCase();
+                                }).filter(function (c) {
+                                    return countSymbols(c) === 1;      // for the sharp s
+                                })
+                            ).filter(onlyUnique),        // for languages without uppercase
+                            search: cdlr.languages[char_key],
+                            id: 'common-'+slugify(char_key)
+                        }
+                    })
+                }
+
+            ];
+
+            // remove items which fit not for searchresults
+            if (templates_sidedrawer.isSearchActive()) {
+                r.map(function (group) {
+                    group.items = group.items.filter(function (item) {
+                        return item.search.toLowerCase().indexOf(templates_sidedrawer.searchTerm().toLowerCase()) !== -1;
+                    })
+                });
+                // remove groups which have no more items
+                r = r.filter(function (group) {
+                    return group.items.length > 0;
+                })
+            }
+            return r;
+        };
+
+        return {
+            charsets: charsets
+        }
+    },
+
+
+    view: function (ctrl) {
+        return m("div", [
+
+            // searchbox
+            m("#searchbox-wrap.mdl-textfield.mdl-js-textfield", [
+                m("input.mdl-textfield__input[id='templs-searchbox'][type='text']",
+                    {
+                        oninput: m.withAttr("value", templates_sidedrawer.searchTerm),
+                        value: templates_sidedrawer.searchTerm()
+                    }),
+                m("label.mdl-textfield__label[for='sample-searchbox']", m("i.material-icons", "search")),
+                templates_sidedrawer.searchTerm().length > 0
+                    ? m('button#searchbox-clear-icon.mdl-button.mdl-js-button.mdl-button--icon',
+                        {
+                            onclick: function () {
+                                templates_sidedrawer.searchTerm('');
+                            }
+                        },
+                        m("i.material-icons", "clear"))
+                    : null
+            ]),
+
+            // groups
+            m(".charset-groups" + (templates_sidedrawer.isSearchActive() ? " search-active" : ""), [
+                ctrl.charsets().length > 0 ?
+                    ctrl.charsets().map(function (charset_group, index) {
+
+                        // Is this group selected. If no group is selected auto select (open) the first one.
+                        var active = charset_group.header === templates_sidedrawer.active_group()
+                            || ( !templates_sidedrawer.active_group() && index === 0)
+                            ? '.active-header'
+                            : '';
+
+                        return m(".charset-group-panel", [
+                            m("h5.clickable" + active+'#char-groups-header-'+slugify(charset_group.header),
+                                {onclick: templates_sidedrawer.active_group.bind(this, charset_group.header)},
+                                pl.t(charset_group.header)),
+
+                            templates_sidedrawer.isSearchActive() || active
+
+                                ? m("ul.mdl-list", [
+                                    charset_group.items.map(function (charset) {
+
+                                        var includes_ligatures = charset.glyphs.reduce(function (a, b) {
+                                            return a || countSymbols(b) > 1
+                                        }, false);
+                                        var charset_glyphs = uniqueArraySorted(charset.glyphs);
+                                        return m("li.mdl-list__item" + (charset.desc ? ".mdl-list__item--three-line" : ""),
+                                            !includes_ligatures || window.fe_user.is_upgraded
+                                                ? {
+                                                    onclick: templates_module.add_glyphs.bind(fonts_module, charset_glyphs),
+                                                    title: charset_glyphs.join(' ')
+                                                }
+                                                : {title: pl.t('Ligatures are only available in the Pro version.')},
+                                            [
+
+                                                m("span.mdl-list__item-primary-content", [
+                                                    m('span#char-group-'+ charset.id  // slugify(charset.name)
+                                                        + (!includes_ligatures || window.fe_user.is_upgraded
+                                                            ? '.clickable'
+                                                            : '.disabled'),
+                                                        charset.name),
+                                                    m(".glyph-count", charset.glyphs.length),
+                                                    charset.desc ?
+                                                        m("span.mdl-list__item-text-body", m(".charset-desc", charset.desc))
+                                                        : null
+                                                ])
+                                                //,m("span.mdl-list__item-secondary-content", charset.glyphs.length )
+
+                                            ])
+
+                                    })
+                                ])
+                                : null
+                        ])
+                    })
+                    : m("#search-no-result", pl.t("No Templates found for this search."))
+            ])
+        ])
+    }
+};
+
+function onlyUnique(value, index, self) {
+    return self.indexOf(value) === index;
+}
+

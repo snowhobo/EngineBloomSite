@@ -1,0 +1,82 @@
+/* global __pixit, m */
+
+__pixit.cursorShade = (function cursorShade() {
+  /**
+   * Set the shade color on the canvas
+   *
+   * @param {HTMLCanvasElement} canvas
+   */
+  function setCanvasColor(canvas) {
+    var color = __pixit.SHADE_COLOR;
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+  }
+
+  /**
+   * @typedef {object} CursorShadeArgs
+   * @property {function} el
+   * @property {function} show
+   * @property {function} zoom
+   * @property {number} maxZoom
+   * @property {function} pencilSize
+   * @property {number} maxPencilSize
+   * @property {function} shape
+   */
+
+  /**
+   * @param {object} ctrl
+   * @param {CursorShadeArgs} args
+   * @return {VirtualDomEl}
+   */
+  function view(ctrl, args) {
+    var canvasSize = args.maxZoom * args.maxPencilSize;
+    return m('canvas.cursorShade', {
+      class: args.show() ? '' : 'no',
+      config: function conf(el, isInit, context) {
+        var drawing = __pixit.drawing;
+
+        var shadeSize = args.pencilSize();
+        var zoom = args.zoom();
+        var shape = args.shape();
+
+        // draw the initial shape
+        if (!isInit) {
+          context.shadeSize = shadeSize;
+          context.zoom = zoom;
+          context.shape = shape;
+
+          args.el(el);
+
+          setCanvasColor(el);
+
+          drawing.drawShape(el, { x: 0, y: 0 }, shadeSize, true);
+        }
+
+        if (shadeSize === context.shadeSize && zoom === context.zoom && shape === context.shape) {
+          return;
+        }
+
+        // redraw the shade whenever the cursor, zoom or shape change
+        context.shadeSize = shadeSize;
+        context.zoom = zoom;
+        context.shape = shape;
+
+        // use a temporary canvas to draw the shape, and then scale the shade and copy the shape
+        var tmpCanvas = drawing.getCanvasCopy(el);
+
+        setCanvasColor(tmpCanvas);
+
+        drawing.drawShape(tmpCanvas, { x: 0, y: 0 }, shadeSize, true);
+        drawing.clearAndDrawScaled(el, tmpCanvas);
+      },
+      width: canvasSize,
+      height: canvasSize
+    });
+  }
+
+  return {
+    view: view
+  };
+})();

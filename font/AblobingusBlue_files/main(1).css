@@ -1,0 +1,261 @@
+* { box-sizing: border-box; }
+
+body { font-family: 'Roboto', sans-serif; height: 100%; }
+
+ul { padding: 0; list-style: none; user-select: none;}
+ol { padding: 0; list-style-position: inside; user-select: none;}
+
+:focus {outline:none !important;}
+::-moz-focus-inner {border:0 !important; outline:none !important;}
+input[range]::-ms-tooltip { display: none; }
+
+#header-logo { text-decoration: none; color: #000; }
+#header-logo:hover { opacity: 0.65 }
+#logo { width:100%;}
+
+.clickable { cursor: pointer}
+
+.clickable, a { transition:all 0.12s ease; cursor: pointer; user-select: none; }
+
+/*.mdl-layout__tab:hover:not(.disabled), a:hover:not(.disabled) { color: rgb(100,255,218) }*!*/
+
+.disabled { opacity: 0.5; cursor: default}
+
+.error { color: rgb(221,44,0)}
+.modal-dialog .calli-radio-label { display: block }
+
+.page-content {padding-left: 60px; padding-top: 2em; padding-right: 2em;}
+
+.calli-radio-list-wrap { margin-bottom: 2em; }
+.calli-radio-list-wrap label { display: block; }
+
+.calli-checkbox-wrap .mdl-checkbox { width: auto; display: block}
+
+.calli_slider { display: block; margin-top: 5px; width: 100%}
+
+#content-wait-overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 9;
+    opacity: 0.75;
+    background-color: #ccc;
+}
+
+#content-wait-overlay-spinner  {
+position: absolute;
+left: 50%;
+top: 50%;
+z-index: 9;
+opacity: 1;
+width: 60px;
+height: 60px;
+}
+
+#account-expire-warning-icon { vertical-align: bottom;  margin-top: -2px; color: rgb(100,255,218)}
+#header-account-info a, footer .footer-nav a { font-size: 16px; color: #eaeaea; }
+#header-account-info a:hover, footer .footer-nav a:hover { color: rgb(100,255,218)  }
+
+#logo-dasboard-wrap { margin-top: 0; margin-bottom: 3em; }
+
+img#logo-dashboard { width: 48%; min-width: 400px;
+    /*filter:  drop-shadow(0 1px 3px rgba(0,0,0,0.16)) drop-shadow(1px 1px 3px rgba(0,0,0,0.23))*/
+}
+
+.spinner-outer-wrap { display: flex; flex-direction: column; justify-content: center; height: 100%; text-align: center;}
+
+.content-hint {
+    background-color: rgba(100,255,218,0.4);
+    margin-left: -60px;
+    padding: 1em 2em 1em 60px;
+    width: 110%;
+    margin-top: 1em;
+}
+
+.content-hint .material-icons {
+    vertical-align: middle;
+    font-size: 36px;
+    padding-right: 6px;
+    color: #888;
+
+}
+
+
+/* SIDEDRAWER */
+#sidedrawer { position: fixed; top: 0; bottom: 0; width: 240px; overflow: auto; z-index: 2;
+    transition: transform 0.2s; }
+p.sidedrawer-padded { padding: 0 20px;}
+
+/* Rules for sizing the icon. */
+.material-icons.md-18 { font-size: 18px; }
+.material-icons.md-24 { font-size: 24px; }
+.material-icons.md-36 { font-size: 36px; }
+.material-icons.md-48 { font-size: 48px; }
+
+/* Rules for using icons as black on a light background. */
+.material-icons.md-dark { color: rgba(0, 0, 0, 0.54); }
+.material-icons.md-dark.md-inactive { color: rgba(0, 0, 0, 0.26); }
+
+/* Rules for using icons as white on a dark background. */
+.material-icons.md-light { color: rgba(255, 255, 255, 1); }
+.material-icons.md-light.md-inactive { color: rgba(255, 255, 255, 0.3); }
+
+b { font-weight: bold;}
+
+.glyph-wrap, .unipicker-char-wrap {
+    font-family: noto_sans_uiregular, sans-serif;
+    max-width: 100%;
+    overflow: hidden;
+    text-align: center;
+}
+
+.font-preview {
+    font-feature-settings: "liga";
+}
+
+.message-box { padding: 1.5em;margin-bottom: 2em; position: relative;}
+.message-box-icon.material-icons { position: absolute;left: 18px; top: 50%; transform: translateY(-50%);
+    font-size: 48px; color: #B2DFDB}
+.message-box-text { margin-left: 60px;}
+
+.material-icons.warning-icon { color: #B2DFDB; vertical-align: text-bottom; padding-right: 5px; }
+
+.lang-nav-buttons { border: 0; background-color: transparent; color: white; margin:0; padding: 0; padding-right: 2em;
+    font-size: 16px; font-weight: 400; cursor: pointer; text-transform: capitalize}
+.lang-nav-buttons:hover { color: rgb(100,255,218)}
+
+.card {
+    background: #fff;
+    border-radius: 2px;
+    position: relative;
+    user-select: none;
+}
+
+.card-1 {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+
+.card-2 {
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+}
+
+.card-3 {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+}
+
+
+.yesno-text { font-weight: 500; font-size: 16px; }
+#yusure-dntask-chckbx-label { margin-top: 1em; }
+
+.dialog-buttons { text-align: right; margin-top:32px;}
+.dialog-buttons button { margin-left: 8px;}
+.modal-dialog h3:first-child { margin-top: 0}
+
+
+/* Navigation Toolbar Customization */
+#module-buttons { display: flex; flex-direction: row; }
+/*.mdl-navigation { margin-left: auto; }      !* push the toolbar buttons to the right. *!*/
+
+
+#calli-toolbar-icons {
+    float: right;
+    line-height: 48px;
+    margin-right: 10px;
+}
+
+/**
+ * Tooltip Styles
+ */
+.form-tooltip { float: right; text-align: left; line-height: 1.4em;}
+
+[data-tooltip] {
+    position: relative;
+    z-index: 2;
+    cursor: pointer;
+    font-size: 20px !important;
+}
+
+/* Hide the tooltip content by default */
+[data-tooltip]:before,
+[data-tooltip]:after {
+    visibility: hidden;
+    -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=0)";
+    filter: progid: DXImageTransform.Microsoft.Alpha(Opacity=0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Position tooltip above the element */
+[data-tooltip]:before {
+    position: absolute;
+    bottom: 150%;
+    margin-bottom: 5px;
+    right: 0;
+    padding: 15px;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    background-color: #000;
+    background-color: hsla(0, 0%, 20%, 0.9);
+    color: #fff;
+    content: attr(data-tooltip);
+    font-size: 14px;
+    line-height: 1.3;
+    font-family: 'Roboto', sans-serif;
+    white-space: normal;
+    text-align: left;
+    width:300px;
+}
+
+/* Triangle hack to make tooltip look like a speech bubble */
+[data-tooltip]:after {
+    position: absolute;
+    bottom: 150%;
+    left: 50%;
+    margin-left: -5px;
+    width: 0;
+    border-top: 5px solid #000;
+    border-top: 5px solid hsla(0, 0%, 20%, 0.9);
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    content: " ";
+    font-size: 0;
+    line-height: 0;
+}
+
+/* Show tooltip content on hover */
+[data-tooltip]:hover:before,
+[data-tooltip]:hover:after {
+    visibility: visible;
+    -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=100)";
+    filter: progid: DXImageTransform.Microsoft.Alpha(Opacity=100);
+    opacity: 1;
+}
+
+.slider-wrap [data-tooltip] { position: absolute; top: 0; right: 0;}
+
+
+/*DASHBOARDS*/
+.dashboard-block { padding: 1em 20% 1em 60px; margin-left: -60px; background-color: #ddd; width: 120%}
+.dashboard-block { margin-top: 1em; margin-bottom: 2em;}
+.dashboard-block h4 { margin-bottom: 0;}
+.dashboard-block h1:first-child, .dashboard-block h2:first-child, .dashboard-block h3:first-child,
+.dashboard-block h4:first-child, .dashboard-block h5:first-child {
+    margin-top: 0;
+}
+.dashboard-block:first-child { margin-top: 4em;}
+
+.dashboard-hint { background-color: rgba(100,255,218, 1)}
+.dashboard-warning { background-color: rgba(255,238,88 ,1)}
+
+
+/*BROWSER FIXES*/
+.edge-fix-double-val:nth-child(2) { display: none; }
+
+/*  */
+.header-logout-link {font-size: 16px; background-color: transparent; border: none;
+    color: #eaeaea;}
+.header-logout-form { display: inline; }

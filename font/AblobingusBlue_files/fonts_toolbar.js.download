@@ -1,0 +1,98 @@
+var fonts_toolbar = {
+
+    // controller: function() {},
+
+    view: function () {
+        var max_number_fonts_reached = fonts_module.fonts() && fonts_module.fonts().length >= window.gn_config.plan_limits.nr_fonts;
+        // var max_reached_disable_config = max_number_fonts_reached
+        //     ? {
+        //         disabled: max_number_fonts_reached,
+        //         title: max_number_fonts_reached ? pl.t('already created max. number fonts') : null
+        //     }
+        //     : {};
+
+        var has_glyphs = fonts_module.current_font() && fonts_module.units() && fonts_module.units().length;
+
+        // Check if there are glyphs to submit
+        var has_glyphs_to_submit = fonts_module.current_font() && fonts_module.units()
+            && ( (window.fe_user.is_upgraded && has_glyphs )      // if upgraded user ligatures are ok also
+            || fonts_module.units().filter(function (item) { return countSymbols(item.unit) == 1; }).length>0 );  // if not upgraded only single chars can be submitted
+
+        return m("div.calli-toolbar", [
+
+            build_toolbar_link(
+                pl.t("New Font"),
+                !max_number_fonts_reached
+                    ? {onclick: Modal.module.bind(this, EditFontForm, null)}
+                    : {title: pl.t('already created max. number fonts')},
+                { disabled: max_number_fonts_reached, id: 'fonts-tb-new-font' }
+            ),
+
+            build_toolbar_link(pl.t('Load Template'),
+                {onclick: Modal.module.bind(this, UploadTemplate),
+                title: pl.t("fonts_toolbar_tooltip_upload_template")},
+                { id: 'fonts-tb-load-template'}
+            ),
+
+
+            build_toolbar_link(
+                pl.t("Build Font"),
+                has_glyphs_to_submit
+                ?  {
+                    onclick: Modal.module.bind(this, BuildFont),
+                    title:pl.t('fonts_toolbar_tooltip_build_font')
+                }
+                : { title:pl.t('There are no glyphs you could submit yet.')}
+                ,
+                {disabled: !has_glyphs_to_submit, id: 'fonts-tb-build-font'}
+            ),
+
+            build_toolbar_link(
+                pl.t("Edit Font Details"),
+                {onclick: fonts_module.current_font()
+                    ? Modal.module.bind(this, EditFontForm, fonts_module.current_font())
+                    : function() {},
+                title: pl.t('fonts_toolbar_tooltip_font_details')},
+                {disabled: !fonts_module.current_font(), id: 'fonts-tb-edit-font'} ),
+
+
+            fonts_module.current_font()
+            ? [
+
+            m("button.mdl-button.mdl-js-button.mdl-button--icon[id='demo-menu-lower-right']", [
+                m("i.material-icons.md-dark", "more_vert")]),
+
+            m("ul.mdl-menu.mdl-menu--bottom-right.mdl-js-menu.mdl-js-ripple-effect[for='demo-menu-lower-right']", [
+                // m("li.mdl-menu__item", {onclick: Modal.module.bind(this, GlyphForm, null)}, "Add Glyph"),
+
+                // m("li.mdl-menu__item",
+                //     {onclick: Modal.module.bind(this, EditFontForm, fonts_module.current_font())},
+                //     "Edit Font Details"),
+
+
+                m("li.mdl-menu__item",
+                    !max_number_fonts_reached
+                        ? { onclick: fonts_module.copy_current_font }
+                        : { disabled: true, title: pl.t('already created max. number fonts') },
+                    pl.t("Copy Font")),
+
+
+                m("li.mdl-menu__item",
+                    { onclick: fonts_module.delete_current_font, },
+                    pl.t("Delete Font")),
+
+                m("li.mdl-menu__item",
+                    has_glyphs
+                        ?  { onclick: Modal.module.bind(this, AdjustBaseline) }
+                        : { disabled: true }           // todo3: There could also be a font with glyphs but no variants.
+                    ,
+                    pl.t("Adjust Baseline")),
+
+
+            ])
+                ]
+                : null
+
+        ])
+    }
+};

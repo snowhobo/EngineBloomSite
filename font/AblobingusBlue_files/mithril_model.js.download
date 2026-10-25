@@ -1,0 +1,553 @@
+/*
+ This classes are used to decouple the UI implemantation from the underlying Dexie.js.
+ Also it is used to integrate the synching of dexie js with a server side DB.
+
+ The ID for new items is created client side by the wrapper for the REST call.
+ The existence of a ID is used to determine if an item is new or an update.
+
+ The version of an item is also created/updated during a save on the serverside.
+ Therefore it is important to use the returned item for further operations.
+ Else the next save will result in a Version conflict with the server.
+ */
+
+
+var Fonts = {
+
+    /** Creates a new font without saving it. */
+    create_new: function (data) {
+        return new Font(Object.assign({}, {
+            name: '',
+            style: 'Regular',
+            font_version: 1,
+            default_glyph_advance: 1,
+            scale_factor: 1,
+            created_seconds: Math.round(new Date() / 1000),
+            word_spacing: 250,
+            copyright: '',
+            trademark: '',
+            manufacturer: '',
+            designer: '',
+            description: '',
+            vendor_url: '',
+            licence_desc: '',
+            licence_url: ''
+        }, data))
+    },
+
+    list: function () {
+        // we order by created_seconds for free users, else the can unlock a disabled font by renaming it.
+        var sortKey = window.fe_user.is_upgraded ? 'name' : 'created_seconds';
+        return db.fonts.toCollection().sortBy(sortKey);
+
+    },
+
+    byId: function (fontId) {
+        return db.fonts.get(fontId);
+        // .catch(function (err) {
+        //     console.error("Failed to byID : " + err);
+        //     throw err; // Re-throw the error to abort flow!
+        // })
+    },
+
+    save: function (data) {
+        return bestore_item_request('save', 'fonts', data)
+            .then(function (result) {
+                    // we use the returned struct to create a new entry in the client side DB. Thereby we get the version number wihich was created on the server side.
+                    return Fonts.save_to_client(result);
+                }
+            );
+    },
+
+    save_to_client: function (data) {
+        return db.fonts.put(data)
+            /*.catch(function (error) {
+                // window.jsLogger && window.jsLogger.error('error at Font save_to_client()', {
+                //     'message': error.message,
+                //     'stack': error.stack,
+                //     'data': data
+                // });
+                window.jsLogger && window.jsLogger.logError(
+                    'error at Font save_to_client()',
+                    error.message,
+                    stack=error.stack
+                );
+                //throw(error);
+            })*/
+    },
+
+    delete: function (fontId) {     // this one uses font id, the rest font as param
+        return bestore_item_request('delete', 'fonts', {id: fontId})
+            .then(Fonts.delete_on_client(fontId))
+    },
+
+    // delete_on_client: function (fontId) {
+    //     console.log("deleting font " + fontId)
+    //     return db.transaction("rw", db.fonts, db.glyphs, db.glyphVariants, function () {
+    //         return db.glyphs.where('fontId').equals(fontId).eachPrimaryKey(function (glyphId) {
+    //             console.log("deleting hlpyfId " + glyphId)
+    //             return db.glyphVariants.where('glyphId').equals(glyphId).delete().then(function () {
+    //                 return db.glyphs.delete(glyphId);
+    //             });
+    //         }).then(function () {
+    //             return db.fonts.delete(fontId);
+    //         });
+    //     })
+    // },
+
+    delete_on_client: function (fontId) {
+        // console.log("deleting font " + fontId)
+        return db.transaction("rw", db.fonts, db.glyphs, db.glyphVariants, function () {
+            return db.glyphs.where('fontId').equals(fontId).eachPrimaryKey(function (glyphId) {
+                // console.log("deleting hlpyfId " + glyphId)
+                return db.glyphVariants.where('glyphId').equals(glyphId).eachPrimaryKey(function (glyphVariantId) {
+                    return db.glyphVariants.delete(glyphVariantId);
+                }).then(function () {
+                    return db.glyphs.delete(glyphId);
+                });
+            }).then(function () {
+                return db.fonts.delete(fontId);
+            });
+        })
+    },
+
+
+    addAllGlyphVariants: function (font, jsonGlyphs) {
+
+        function getOrCreateGlyphByUnitPromise(chars, fontId) {
+            chars = chars.trim();
+            return db.glyphs.where('unit')
+                .equals(chars)
+                .filter(function (glyph) {
+                    return glyph.fontId === fontId;
+                })
+                .first()
+                .then(function (glyph) {
+                    if (!glyph) {
+                        var new_glyph_data = {
+                            fontId: fontId,
+                            unit: chars
+                        };
+                        return Glyphs.save(new_glyph_data)
+                    }
+                    return glyph.id;
+                });
+        }
+
+        // first create all glyphs
+        var units = jsonGlyphs.map(function (g) {
+            return g.chars
+        });
+        var unique_units = uniqueArray(units);
+        return Dexie.Promise.all(
+            unique_units.map(function (unit) {
+                return getOrCreateGlyphByUnitPromise(unit, font.id)
+            })
+        )
+            .then(function () {
+                    // then the variants
+                    return Dexie.Promise.all(jsonGlyphs.map(function (g) {
+                        return Fonts.addGlyphVariant(font, g.chars, g.base64encoded)
+                    }))
+                }
+            )
+
+    },
+
+
+    // getOrCreateGlyphByUnitPromise: function (fontId, unit) {
+    //     return db.glyphs.where('unit')
+    //         .equals(unit)
+    //         .filter(function (glyph) {
+    //             return glyph.fontId === fontId;
+    //         })
+    //         .first()
+    //         .then(function (glyph) {
+    //             if (!glyph) {
+    //                 var new_glyph_data = {
+    //                     fontId: fontId,
+    //                     unit: unit,
+    //                     id: create_uuid(),
+    //                     version: 0
+    //                 };
+    //                 return Glyphs.save_to_client(new_glyph_data)
+    //             }
+    //             return glyph.id;
+    //         });
+    // },
+
+    /**
+     * Add the given glyph variant to a font. Creates a new glyph for this font, if there is not already one.
+     * @param font
+     * @param chars A single char will represent a glyph, multiple chars a ligature.
+     * @param image_base64
+     */
+    addGlyphVariant: function (font, chars, image_base64) {
+        if (chars.length === 0) {
+            throw new Error("addGlyphVariant: Cannot add empty chars.")
+        }
+
+        var getOrCreateGlyphByUnitPromise = db.glyphs.where('unit')
+            .equals(chars)
+            .filter(function (glyph) {
+                return glyph.fontId === font.id;
+            })
+            .first()
+            .then(function (glyph) {
+                if (!glyph) {
+                    var new_glyph_data = {
+                        fontId: font.id,
+                        unit: chars
+                    };
+                    return Glyphs.save(new_glyph_data)
+                }
+                return glyph.id;
+            });
+
+        return getOrCreateGlyphByUnitPromise.then(function (glyphId) {
+            return Variants.save(Variants.create_new({
+                image_base64: image_base64,
+                glyphId: glyphId
+            }));
+        });
+    },
+
+    copyFont: function (fontToCopy) {
+        // create unique name
+        var new_name = fonts_module.current_font().name;
+        var suffix = 2;
+        while (true) {
+            if (!get_obj_by_prop_value(fonts_module.fonts(), 'name', new_name + ' ' + suffix.toString())) {
+                new_name = new_name + ' ' + suffix.toString();
+                break
+            }
+            suffix++;
+        }
+
+        // create new font object
+        var new_font = Object.assign({},
+            fontToCopy,
+            {
+                name: new_name,
+                created_seconds: Math.round(new Date() / 1000)
+            }
+        );
+        delete new_font.id;
+        delete new_font.version;
+
+        // save it, including contained glyphs and variants the
+        return Fonts.save(new_font).then(function (newFontId) {
+            Glyphs.listByFontId(fonts_module.current_font().id).then(function (glpyhs) {
+                glpyhs.map(function (glyph) {
+                    var new_glyph = Object.assign({}, glyph, {fontId: newFontId});
+                    delete new_glyph.id;
+                    delete new_glyph.version;
+                    Glyphs.save(new_glyph).then(function (newGlyphId) {
+                        Variants.listByGlyphId(glyph.id).then(function (variants) {
+                            variants.map(function (variant) {
+                                var new_variant = Object.assign({}, variant, {glyphId: newGlyphId});
+                                delete new_variant.id;
+                                delete new_variant.version;
+                                Variants.save(new_variant).then(function () {
+                                    return newFontId;
+
+                                })
+                            })
+                        })
+                    })
+                })
+            });
+        });
+        //})
+    }
+};
+
+// ================  GLYPHS ===================================
+var Glyphs = {
+
+    save: function (data) {
+        return bestore_item_request('save', 'glyphs', data)
+            .then(function (result) {
+                    return Glyphs.save_to_client(result);
+                }
+            )
+    },
+
+    save_to_client: function (data) {
+        return db.glyphs.put(data)
+            .catch(function (error) {
+                window.jsLogger && window.jsLogger.error('error at Glyphs.save_to_client()', {
+                    'message': error.message,
+                    'stack': error.stack,
+                    'data': data
+                });
+                throw(error);
+            })
+    },
+
+    delete: function (glyph) {
+        return bestore_item_request('delete', 'glyphs', glyph)
+            .then(function () {
+                return Glyphs.delete_on_client(glyph)
+            })
+    },
+
+    // todo3: not quite right: have a look at fonts.delete_on_client how to implement.
+    delete_on_client: function (glyph) {
+        // delete glyph and his related variants
+        return db.transaction("rw", db.glyphs, db.glyphVariants, function () {
+            db.glyphVariants.where('glyphId').equals(glyph.id).delete();
+            db.glyphs.delete(glyph.id);
+        });
+    },
+
+    listByFontId: function (fontId) {
+        return db.glyphs.where('fontId').equals(fontId).toArray()
+    },
+
+    detail: function (glyphId) {
+        return db.glyphs.get(glyphId);
+    },
+
+    listByUnits: function (fontId, unitArray) {
+        return db.glyphs.where('unit').anyOf(unitArray).toArray().then(function (glyphs) {
+            glyphs = glyphs.filter(function (g) {
+                return g.fontId === fontId
+            });
+            return glyphs;
+        })
+    }
+
+
+};
+
+// =================== Variants ======================================
+var Variants = {
+
+    /* Create a new without saving it. */
+    create_new: function (data) {
+        return new GlyphVariant(Object.assign({}, {
+            // image_base64: image_base64,
+            // glyphId: glyphId,
+            isDefault: false,
+            base_adjustment: 0,
+            scale_factor: 1,
+            custom_advance: 0, // will be depracted for left and right bearing
+            left_bearing: 0,
+            right_bearing: 0
+        }, data))
+    },
+
+    save: function (data) {
+        // first save to backend ( if be save is active) and then to client.
+        return bestore_item_request('save', 'variants', data)
+            .then(function (result) {
+                    return Variants.save_to_client(result);
+                }
+            )
+    },
+
+
+    // save_to_client: function (data) {
+    //     return db.glyphVariants.put(data)
+    //         .then(null, function (error) {
+    //             console.log("eeeeeeeeeeeeeeee", error)
+    //             if (error.name === "ConstraintError") {
+    //                 throw Error("font with this name already exists (todo: check if the error message makes sense. we save a variant not a font. is this a copy/paste error..")
+    //             }
+    //             throw("Unexpected Error");
+    //         })
+    // },
+
+
+    save_to_client: function (data) {
+        return db.glyphVariants.put(data)
+            .catch(function (error) {
+                window.jsLogger && window.jsLogger.error('error at Variant save_to_client()', {
+                    'message': error.message,
+                    'stack': error.stack,
+                    'data': data
+                });
+                throw(error);
+            })
+    },
+
+    delete: function (item) {
+        return bestore_item_request('delete', 'variants', item)
+            .then(Variants.delete_on_client(item))
+    },
+
+    deleteBulk: function (variantArray) {
+        var p = Promise.resolve();
+        for (var i = 0; i < variantArray.length; i++) {
+            p = p.then(Variants.delete.bind(null, variantArray[i]));
+        }
+        return p;
+    },
+
+    delete_on_client: function (variant) {
+        return db.glyphVariants.delete(variant.id);
+    },
+
+    listByGlyphId: function (glyphId) {
+        return db.glyphVariants.where('glyphId').equals(glyphId).toArray()
+    },
+
+    /**
+     * Sets the given glyph variant as default glyphs. Marks the other variants of the glyph as isDefault = false.
+     */
+    make_default: function (default_variant) {
+        // nth: instead of marking all as not default, only set the current default variant to isDefault=False and save a few requests.
+        function update_is_default(variant, default_variant_id) {
+            variant.isDefault = variant.id === default_variant_id;
+            return Variants.save(variant);
+        }
+
+        return Variants.listByGlyphId(default_variant.glyphId).then(function (all) {
+            var all_promises = [];
+            for (var i = 0; i < all.length; i++) {
+                all_promises.push(update_is_default(all[i], default_variant.id))
+            }
+            return Promise.all(all_promises);
+        });
+    },
+
+    listByGlyphIdList: function (glyphIdArray) {
+        return db.glyphVariants.where('glyphId').anyOf(glyphIdArray).toArray()
+    },
+
+    listByUnitList: function (fontId, unitArray) {
+        return db.glyphs.where('unit').anyOf(unitArray).toArray().then(function (glyphs) {
+            glyphs = glyphs.filter(function (g) {
+                return g.fontId === fontId
+            });
+            return db.glyphVariants.where('glyphId').anyOf(glyphs.map(function (g) {
+                return g.id
+            })).toArray()
+        })
+    },
+
+    listByFontId: function (fontId) {
+        return Glyphs.listByFontId(fontId).then(function (glyphs) {
+            return Variants.listByGlyphIdList(glyphs.map(function (glyph) {
+                return glyph.id
+            }))
+        })
+    },
+
+    /** Returns a list of all variants belonging to the font with given id. Returned dicts are enriched with infomration
+     * about the contained unit, which is useful for eg. alphabetically sorting.
+     * @param fontId
+     */
+    listByFontIdAddedGlyphInfo: function (fontId) {
+        return Glyphs.listByFontId(fontId).then(function (glyphs) {
+            return Variants.listByGlyphIdList(glyphs.map(function (glyph) {
+                return glyph.id
+            })).then(function (variants) {
+                    variants = variants.map(function (variant) {
+                        var parent_glyph = get_obj_by_prop_value(glyphs, 'id', variant.glyphId)
+                        variant.unit = parent_glyph.unit;
+                        return variant;
+                    });
+                    return variants
+                }
+            )
+        })
+    },
+};
+
+
+// ===================== CURRENT TEMPLATE ===============================
+
+var CurrentTemplate = {
+    list: function () {
+        return db.currentTemplate.orderBy('unit').toArray()
+    },
+    save: function (fontData) {
+        db.currentTemplate.put(fontData);
+    },
+
+    delete: function (fontId) {
+        return db.currentTemplate.delete(fontId);
+    },
+
+    /** adds all chars from the given array as units. */
+    addAllChars: function (all) {
+        return db.transaction('rw', db.currentTemplate, function () {
+            all.map(function (char_str) {
+                db.currentTemplate.put({unit: char_str})
+            })
+        });
+    },
+
+    truncate: function () {
+        return db.currentTemplate.clear()
+    }
+};
+
+/**
+ * Helperfunction for sending synching (save,update,delete) requests to the backend REST API.
+ * For save (new items) requests an id is generated.
+ * Request is only send if the user is a non free user else the input item_data (with the new created id for save)
+ * is returned.
+ * @param action_type String for type of action: save, delete. If it is a create or an update depends if the given data
+ * has an id or not.
+ * @param item_type String for the type of item. font, glyph, ... Is used to construct the URL of the REST request.
+ * @param item_data Data of object to perisist.
+ * @returns {Promise<any>} Returns a promise which resolves to the given item which is updated with an ID and a Version
+ * for save requests.
+ */
+function bestore_item_request(action_type, item_type, item_data) {
+
+    var method;
+    var req_data = {};
+
+    var url = window.be_config.be_store_base_url + item_type + '/';
+    url = url + (item_data.id ? item_data.id + "/" : "");     // for existing objects add the id to the URL.
+
+    if (action_type === "save") {
+        if (item_data.id) {
+            // it is an update
+            method = "PUT";
+            req_data = item_data;
+        }
+        else {
+            // it is an insert
+            if (item_data.hasOwnProperty('version')) {
+                window.jsLogger && window.jsLogger.warn(sprintf('bestore_item_request: Item has no id but a version: %j', item_data));
+            }
+            method = "POST";
+            req_data = Object.assign({}, item_data, {
+                id: create_uuid(),
+                version: 0
+            });
+        }
+
+        // we do create IDs on the client side. Doing it here as late as possible helps to decide between update and create.
+
+    }
+    else if (action_type === "delete") {
+        method = "DELETE";
+    }
+    else {
+        console.error(sprintf('bestore_item_request: Not implemented action Type: %s', action_type))
+    }
+
+    // Data is stored on server only for upgraded users. Return without saving for free users.
+    if (!window.fe_user.is_upgraded) {
+        return Promise.resolve(req_data);
+    }
+
+    return do_fetch(url, method, req_data)
+        .catch(function (error) {
+            window.jsLogger && window.jsLogger.error('error at Variant bestore_item_request()', {
+                'message': error.message,
+                'stack': error.stack,
+                'item_data': item_data,
+                'item_type': item_type,
+                'action_type': action_type,
+                'url': url
+            });
+            throw(error);
+        });
+}
+

@@ -1,0 +1,468 @@
+var AdjustBaseline = {
+    // original this dialog was used to adjust the baselne only. But later the possibility to modify a scale factor was added.
+
+    // todo5: bug: If shift+arrow left or right. the character which was selected first goes away. It is still in the list. but it is on his original place.
+
+    glyph_height: 180,      // glpyhs are shown equalized to this height
+    // nr_helplines: 7,
+
+    // we use the same values here as the helplines in the template_creator.py.
+    // todo5: fetch them from some common config.
+    helplines_top: [0.15, 0.35, 0.67, 0.85],
+
+    processing_variants_finished: false,
+
+    vm: {
+        selectedVariantId: m.prop(),        // Variant currently selected for adjustment.
+        allVariants: m.prop(),
+        firstHalf: [],
+        secondHalf: []
+    },
+
+    controller: function (variant) {
+
+        // todo3: catch case if this is called and there isn't yet a a variant
+        AdjustBaseline.processing_variants_finished = false;
+        // rest of the controller might take a moment, so we call redraw so that the waiting spinner get shown.
+        m.redraw();
+        // crop and store all processed variants to the local cache.
+        Variants.listByFontIdAddedGlyphInfo(fonts_module.current_font_id())
+            .then(function (variants) {
+                variants.sort(function (a, b) {
+                    return a.unit.codePointAt(0) - b.unit.codePointAt(0);
+                });
+                variants.map(function (variant) {
+                    AdjustBaseline.add_cropped_image_property(variant);
+                    variant.base_adjustment = variant.base_adjustment ? variant.base_adjustment : 0;
+                });
+                AdjustBaseline.vm.allVariants(variants);
+                AdjustBaseline.split_to_halfs();
+
+                // if Dialog is called without a specified variant we just show select a random variant.
+                var variant_id = (typeof variant.id !== 'undefined') ? variant.id : AdjustBaseline.vm.allVariants()[0].id;
+                AdjustBaseline.vm.selectedVariantId(variant_id);
+                AdjustBaseline.processing_variants_finished = true;
+
+                m.redraw()
+            });
+
+
+    },
+
+    get_selected_variant: function() {
+        return get_obj_by_prop_value(AdjustBaseline.vm.allVariants(), 'id', AdjustBaseline.vm.selectedVariantId());
+    },
+
+    /** Prepares the list for the left and the right side. */
+    split_to_halfs: function (variant) {
+        var varsListLen = AdjustBaseline.vm.allVariants().length;
+        var half = variant
+            ? AdjustBaseline.vm.allVariants().indexOf(variant)
+            : Math.ceil(varsListLen / 2);
+        AdjustBaseline.vm.firstHalf = AdjustBaseline.vm.allVariants().slice(0, half);
+        AdjustBaseline.vm.secondHalf = AdjustBaseline.vm.allVariants().slice(half, varsListLen);
+    },
+
+    add_cropped_image_property: function (variant) {
+        var img = new Image();
+        img.onload = function () {
+            var res = removeImageBlanks(img);
+            variant.cropped_image_uri = res[0];
+            variant.cropped_image_width = res[1];
+            variant.cropped_image_height = res[2];
+            m.redraw();     // necessary redraw().
+        };
+        img.src = "data:image/png;base64," + variant.image_base64;
+
+    },
+
+    shuffle_variants: function () {
+        shuffleArray(AdjustBaseline.vm.allVariants());
+        AdjustBaseline.split_to_halfs();
+    },
+
+    adjust_adjustment: function (value) {
+        get_obj_by_prop_value(AdjustBaseline.vm.allVariants(), 'id', AdjustBaseline.vm.selectedVariantId()).base_adjustment += value;
+    },
+
+    adjust_scalefactor: function (value) {
+        get_obj_by_prop_value(AdjustBaseline.vm.allVariants(), 'id', AdjustBaseline.vm.selectedVariantId()).scale_factor += value;
+    },
+
+    rotate_variants: function (to_left) {
+        arrayRotate(AdjustBaseline.vm.allVariants(), to_left);
+        AdjustBaseline.split_to_halfs();
+    },
+
+    select_variant_right: function() {
+        if (AdjustBaseline.vm.secondHalf.length>0) {
+            var current_selected_variant = AdjustBaseline.get_selected_variant();
+            var next_variant = AdjustBaseline.vm.secondHalf.shift();
+            AdjustBaseline.vm.selectedVariantId(next_variant.id);
+            AdjustBaseline.vm.firstHalf.push(current_selected_variant);
+            // arrayRotate(AdjustBaseline.vm.allVariants(), true);
+            // AdjustBaseline.split_to_halfs();
+        }
+    },
+
+    select_variant_left: function() {
+        if (AdjustBaseline.vm.firstHalf.length>0) {
+            var current_selected_variant = AdjustBaseline.get_selected_variant();
+            var next_variant = AdjustBaseline.vm.firstHalf.pop();
+            AdjustBaseline.vm.selectedVariantId(next_variant.id);
+            AdjustBaseline.vm.secondHalf.unshift(current_selected_variant);
+            // arrayRotate(AdjustBaseline.vm.allVariants(), false);
+            // AdjustBaseline.split_to_halfs();
+        }
+    },
+
+    select_variant: function (variant) {
+        var new_selected_index = AdjustBaseline.vm.allVariants().indexOf(variant);
+        var shift_right = new_selected_index - Math.ceil(AdjustBaseline.vm.allVariants().length / 2);
+        arrayRotateByCount(AdjustBaseline.vm.allVariants(), shift_right);
+        AdjustBaseline.vm.selectedVariantId(variant.id);
+
+        AdjustBaseline.split_to_halfs(variant);
+    },
+
+    keydown_handler: function(e) {
+        var key_mapping = {
+            "ArrowRight": AdjustBaseline.rotate_variants.bind(this, true),
+            "ArrowLeft": AdjustBaseline.rotate_variants.bind(this, false),
+            "s": AdjustBaseline.shuffle_variants,
+            "+": AdjustBaseline.adjust_scalefactor.bind(this, 0.01),
+            "-": AdjustBaseline.adjust_scalefactor.bind(this, -0.01),
+            "ArrowUp":  AdjustBaseline.adjust_adjustment.bind(this, -0.01),
+            "Shift+ArrowUp": AdjustBaseline.adjust_adjustment.bind(this, -0.05),
+            "ArrowDown":  AdjustBaseline.adjust_adjustment.bind(this, 0.01),
+            "Shift+ArrowDown": AdjustBaseline.adjust_adjustment.bind(this, 0.05),
+            "Shift+ArrowRight": AdjustBaseline.select_variant_right,
+            "Shift+ArrowLeft": AdjustBaseline.select_variant_left,
+        };
+        var key_str = e.key;
+        if (e.shiftKey) {
+            key_str = 'Shift+'+key_str;
+        }
+        if (key_str in key_mapping) {
+            key_mapping[key_str]();
+            m.redraw(true)
+        }
+    },
+
+    /**
+     * Check all Variants for updated base_adjustment or scalefactor values and save the updated ones.
+     */
+    save_all: function () {
+        Home.show_content_working_overlay();
+        return Variants.listByFontId(fonts_module.current_font_id())
+            .then(function (variantsOrig) {
+                // We update a reloaded list of variants with the updated value of 'base_adjustment' and 'scale_factor'.
+                // We do this, because we want to avoid to accidentally save some of the temporary properties like eg. cropped_image_uri.
+                // var counter = 0;
+
+                var changed = variantsOrig.filter(function (varOrig) {
+                    var varCur = get_obj_by_prop_value(AdjustBaseline.vm.allVariants(), 'id', varOrig.id);
+                    return varCur.base_adjustment !== varOrig.base_adjustment
+                        || varCur.scale_factor !== varOrig.scale_factor;
+                });
+                return Dexie.Promise.all(changed.map(function (varOrig) {
+                        var varCur = get_obj_by_prop_value(AdjustBaseline.vm.allVariants(), 'id', varOrig.id);
+                        varOrig.base_adjustment = varCur.base_adjustment;
+                        varOrig.scale_factor = varCur.scale_factor;
+                        return Variants.save(varOrig)
+                    })
+                )
+                    .then(function (r) {
+                        show_toast(pl.t('updated_nr_variants', {nr_updated: changed.length}));
+                        Modal.module(null);
+                        if (glyphs_content.glyphId()) {   // if this dialog called from the font module toolbar this meight be unset.
+                            glyphs_content.update_variants_list();
+                            Home.hide_home_waiting_overlay()
+                        }
+                        else {
+                            Home.hide_home_waiting_overlay();
+                            m.redraw()
+                        }
+                    });
+            })
+    },
+
+    reset_all: function () {
+        function actionFunc() {
+            Home.show_content_working_overlay();
+            // return Dexie.Promise.all(
+            //     AdjustBaseline.vm.allVariants().map(function (variant) {
+            //         variant.base_adjustment = 0;
+            //         variant.scale_factor = 1;
+            //         return Variants.save(variant)
+            //     })
+            // )
+
+            AdjustBaseline.vm.allVariants().map(function (variant) {
+                variant.base_adjustment = 0;
+                variant.scale_factor = 1;
+            });
+
+            AdjustBaseline.save_all();
+            //     .then(function() {
+            //     glyphs_content.update_variants_list(Home.hide_home_waiting_overlay)
+            // })
+        }
+
+        show_are_your_sure_dialog({
+            text: pl.t('reset_all_adjustments_for_font'),
+            button_label: "Reset all",
+            action_function: actionFunc
+        });
+
+
+    },
+
+    view: function (controller) {
+        if (AdjustBaseline.processing_variants_finished === true) {
+            var curVar = get_obj_by_prop_value(AdjustBaseline.vm.allVariants(), 'id', AdjustBaseline.vm.selectedVariantId());
+            // calculate the width of the adjust box in the center.
+            var adjustBoxWidth = calc_variant_width(curVar);
+            var max_base_adjust = 0.7;
+            return m('#base-adjust-dialog', [
+                    m('#base-adjust-shortcuts-help', m.trust(snippets['addjust_baseline_dialog_shortcuts'])),
+                    m('h3', pl.t('Adjust Baseline and Size')),
+                    m("#current-unit-hint-wrap", m("#current-unit-hint", curVar.unit)),
+                    m('#glyphs-selection-visible-wrap',
+                        {
+                            style: {height: AdjustBaseline.glyph_height + 'px'}
+                        },
+                        [
+                            m('#left-side',
+                                {
+                                    style: {marginRight: adjustBoxWidth / 2 + 'px'}
+                                },
+                                AdjustBaseline.vm.firstHalf.map(function (variant) {
+                                    return build_variant_box(variant)
+                                })
+                            ),
+
+                            // Centered adjust box for the currently active glyph
+                            m(
+                                '#adjust-box',
+                                {
+                                    style: {
+                                        transform: 'translateX(-50%) ' +
+                                        'translateY(' + curVar.base_adjustment * 100 + '%) ' +
+                                        'scale(' + curVar.scale_factor + ')',
+                                    }
+                                },
+                                m("img#adjust-box-image",
+                                    (typeof curVar.cropped_image_uri !== 'undefined')
+                                        ? {src: curVar.cropped_image_uri}
+                                        : {}
+                                )
+                            ),
+
+                            m('#right-side',
+                                {
+                                    style: {
+                                        marginLeft: adjustBoxWidth / 2 + 'px',
+                                        height: AdjustBaseline.glyph_height + 'px'
+                                    }
+                                },
+                                AdjustBaseline.vm.secondHalf.map(function (variant) {
+                                    return build_variant_box(variant)
+                                })),
+
+                            // range_from_to(0, AdjustBaseline.nr_helplines).map(function (index) {
+                            //     var pos_y = AdjustBaseline.glyph_height / AdjustBaseline.nr_helplines * index;
+                            //     return m(".adjust-helpline", {style: {top: Math.min(AdjustBaseline.glyph_height - 1, pos_y) + 'px'}})
+                            // }),
+
+                            AdjustBaseline.helplines_top.map(function (top) {
+                                var pos_y = parseInt(AdjustBaseline.glyph_height * top);
+                                return m(".adjust-helpline", {style: {top: pos_y + 'px'}})
+                            }),
+
+                            m('#adjust-glyphs-scroll-left.adjust-glyphs-scroll',
+                                build_icon_button('chevron_left',
+                                    {onclick: AdjustBaseline.rotate_variants.bind(this, false)},
+                                    {id: 'adjust-shift-left-button', classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                                )
+                            ),
+
+                            m('#adjust-glyphs-shuffle',
+                                build_button(pl.t('Shuffle'),
+                                    {onclick: AdjustBaseline.shuffle_variants},
+                                    {id: 'adjust-shuffle-button', classes: ['mdl-button--raised']}
+                                )),
+
+                            m('#adjust-glyphs-scroll-right.adjust-glyphs-scroll',
+                                build_icon_button('chevron_right',
+                                    {onclick: AdjustBaseline.rotate_variants.bind(this, true)},
+                                    {id: 'adjust-shift-right-button', classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                                )
+                            )
+                        ]
+                    ),
+
+                    m('h5', pl.t('Adjust baseline')),
+                    m('#control-wrap', [
+                        m('#arrows-updown-wrap', [
+                            build_icon_button('arrow_upward',
+                                {
+                                    onclick: AdjustBaseline.adjust_adjustment.bind(this, -0.05),
+                                    disabled: curVar.base_adjustment <= -max_base_adjust
+                                },
+                                {classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                            ),
+                            build_icon_button('keyboard_arrow_up',
+                                {
+                                    onclick: AdjustBaseline.adjust_adjustment.bind(this, -0.01),
+                                    disabled: curVar.base_adjustment <= -max_base_adjust
+                                },
+                                {classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                            ),
+
+                            m('span#baseline-adjust-value', Math.round(curVar.base_adjustment * 100) + '%'),
+
+                            build_icon_button('keyboard_arrow_down',
+                                {
+                                    onclick: AdjustBaseline.adjust_adjustment.bind(this, +0.01),
+                                    disabled: curVar.base_adjustment >= max_base_adjust
+                                },
+                                {classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                            ),
+                            build_icon_button('arrow_downward',
+                                {
+                                    onclick: AdjustBaseline.adjust_adjustment.bind(this, +0.05),
+                                    disabled: curVar.base_adjustment >= max_base_adjust
+                                },
+                                {classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                            )
+                        ])
+                    ]),
+
+                    m('h5', pl.t('Adjust size')),
+                    m('#scale-control-wrap', [
+                        build_icon_button('add',
+                            {
+                                onclick: AdjustBaseline.adjust_scalefactor.bind(this, 0.05),
+                                disabled: curVar.scale_factor >= 2.45
+                            },
+                            {classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                        ),
+
+                        m('#scale-value', Math.round(curVar.scale_factor * 100) + '%'),
+
+                        build_icon_button('remove',
+                            {
+                                onclick: AdjustBaseline.adjust_scalefactor.bind(this, -0.05),
+                                disabled: curVar.scale_factor <= 0.05
+                            },
+                            {classes: '.mdl-button--fab.mdl-button--mini-fab'}
+                        )
+                    ]),
+
+
+                    m(__mdl_helper.form_buttons, {
+                        action_func: AdjustBaseline.save_all,
+                        action_label: pl.t('Save adjustments'),
+                        additional_buttons: [{label: pl.t('Reset all'), action: AdjustBaseline.reset_all}]
+                    }),
+
+                ])
+        }
+        else {
+            return build_centered_spinner(pl.t('Just a moment ...'))
+        }
+    }
+
+
+};
+
+/**
+ * Calculate the width of a variant considering the scalefactor and the scaling necessary to adapt to the common height.
+ * @param variant The local stored variant type with the cropped image information.
+ */
+function calc_variant_width(variant) {
+    return variant.cropped_image_width         // the width of the image after cropping empty parts.
+        * (AdjustBaseline.glyph_height / variant.cropped_image_height)  // the scale factor caused by equalizing the glyphs to the same height.
+        * variant.scale_factor;      // the scale factor of the glyph itself.
+}
+
+function build_variant_box(variant) {
+    var boxWidth = calc_variant_width(variant);
+
+    return variant.id === AdjustBaseline.vm.selectedVariantId()
+        ? null
+        : m('.variant-box',
+            {
+                style: {
+                    transform: 'translateY(' + variant.base_adjustment * 100 + '%) ' +
+                    'scale(' + variant.scale_factor + ')',
+                    width: boxWidth + 'px',
+                    height: AdjustBaseline.glyph_height + 'px'
+                }
+            },
+            [
+                m("img.variant-box-image.clickable",
+                (typeof variant.cropped_image_uri !== 'undefined') ?
+                    {
+                        src: variant.cropped_image_uri,
+                        onclick: AdjustBaseline.select_variant.bind(this, variant),
+                    } : {}
+                )
+            ])
+}
+
+/** remove the white space to the left and right of an image. */
+function removeImageBlanks(imageObject) {
+    var imgWidth = imageObject.width;
+    var imgHeight = imageObject.height;
+    var canvas = document.createElement('canvas');
+    canvas.setAttribute("width", imgWidth);
+    canvas.setAttribute("height", imgHeight);
+    var context = canvas.getContext('2d');
+    context.drawImage(imageObject, 0, 0);
+
+    var imageData = context.getImageData(0, 0, imgWidth, imgHeight),
+        data = imageData.data,
+        isWhite = function (x, y) {
+            var offset = imgWidth * y + x;
+            // we test only red instead of all channels, this might a bit faster
+            return data[offset * 4] > 220 || data[offset * 4 + 3] < 20;
+        },
+        scanX = function (fromLeft) {
+            var offset = fromLeft ? 1 : -1;
+
+            // loop through each column
+            for (var x = fromLeft ? 0 : imgWidth - 1; fromLeft ? (x < imgWidth) : (x > -1); x += offset) {
+
+                // loop through each row
+                for (var y = 0; y < imgHeight; y++) {
+
+                    if (!isWhite(x, y)) {
+                        return x;
+                    }
+                }
+            }
+            return null; // all image is white
+        };
+
+    var cropLeft = scanX(true),
+        cropRight = scanX(false),
+        cropWidth = cropRight - cropLeft
+        ;
+    canvas.setAttribute("width", cropWidth);
+
+    canvas.getContext("2d").drawImage(imageObject,
+        cropLeft, 0, cropWidth, imgHeight,
+        0, 0, cropWidth, imgHeight);
+
+    return [canvas.toDataURL(), cropWidth, imgHeight];
+}
+
+function withKey(key, callback) {
+    return function (e) {
+        var ch = String.fromCharCode(e.keyCode)
+        if (ch == key) callback(key)
+        else m.redraw.strategy("none") //don't redraw (v0.1.20+ only)
+    }
+}

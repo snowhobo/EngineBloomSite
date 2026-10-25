@@ -1,0 +1,84 @@
+var dashboard_content = {
+
+    browser: {
+        supported: m.prop(check_browser()),        // 0: not supported  1: maybe  2: supported
+    },
+
+    controller: function (args) {
+
+    },
+
+    view: function () {
+        var browser_recommondation = pl.t('browser_recommondation');
+        return m('#main-dashboard.dashboard-content-wrap', [
+
+            m('#logo-dasboard-wrap', m('img#logo-dashboard', {src: window.static_path + 'img/logo.svg'})),
+
+            dashboard_content.browser.supported() == 2
+                ? null
+                : dashboard_content.browser.supported() == 0
+                    ? m('.dashboard-block.dashboard-warning', pl.t('browser_not_supported') + browser_recommondation)
+                    : m('.dashboard-block.dashboard-warning', pl.t('browser_maybe_supported') + browser_recommondation),
+
+            window.fe_user.show_expire_warning
+                ? m('.dashboard-block.dashboard-hint', [
+                    m('span', window.fe_user.account_expire_str + ' '),
+                    m('a[href=' + window.fe_urls.upgrade_url + ']', pl.t('Extend your upgrade now.'))]
+                )
+                : null,
+
+
+            m('.dashboard-block', m.trust(snippets.dashboard)),
+
+            // Profile
+            m('.dashboard-block#dashboard-profile', [
+                m('div', pl.t('you_are_logged_in_as', {username: window.fe_user.username})),
+                m('form.logout-form-dashboard[method=post][action=' + window.fe_user.logout_url + ']', m.trust(c_token), m('button.logout-button-dashboard[type=submit]', pl.t('Log out')))    ,
+                m('span', ' | '),
+                m("a[href=" + window.fe_user.profile_url + "]", pl.t('Edit Profile')),
+
+                m('h4', pl.t('Current plan')),
+                window.fe_user.is_upgraded
+                    ? [
+                        m('span', m.trust(pl.t('using_pro'))),
+                        m('br'),
+                        window.fe_user.has_subscription
+                            ? [
+                                m('div', pl.t('active_subscription')),
+                            ]
+                            : [
+                                m('span', m.trust(pl.t('days_left', {days_left: window.fe_user.upgrade_days_left}))),
+                                m('br'),
+                                m('a[href=' + window.fe_urls.upgrade_url + ']#dashboard-profile-extend-link', pl.t('Extend your account upgrade.')),
+                            ]
+
+                    ]
+                    : [
+                        m('span', m.trust(pl.t('using_free_version'))),
+                        m('br'),
+                        m('a[href=' + window.fe_urls.upgrade_url + ']#dashboard-profile-upgrade-link', pl.t('Upgrade your account to the Pro version.')),
+                    ],
+
+                m('h4', pl.t('Limits')),
+                m('div', window.gn_config.plan_limits.nr_fonts == 1 ? pl.t('One font') : window.gn_config.plan_limits.nr_fonts + ' ' + pl.t('fonts')),
+                m('div', window.gn_config.plan_limits.nr_glyphs + ' ' + pl.t('characters') + ' ' + (window.fe_user.is_upgraded ? pl.t('or ligatures') : pl.t('(no ligatures)')) + ' ' + pl.t('per font.')),
+                m('div', window.gn_config.plan_limits.nr_variants + ' ' + pl.t('variants per characters') + ' ' + (window.fe_user.is_upgraded ? pl.t('or ligatures') : '') + '.'),
+
+                window.gn_config.enable_debug_opt
+                    ? [
+                        m('h4', 'Testing only'),
+                        m('div', [m('a', {
+                                onclick: function () {
+                                    indexedDB.deleteDatabase(window.fe_user.clientdb_name);
+                                }
+                            },
+                            'Delete my IndexedDB'),
+                            m('span', ' This will delete all your data stored in the browser, but not on the server. click it two times and reload the page afterwards.')
+                        ]),
+                    ]
+                    : null,
+            ])
+        ]);
+    }
+};
+

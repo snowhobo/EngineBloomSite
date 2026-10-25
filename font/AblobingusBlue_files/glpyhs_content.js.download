@@ -1,0 +1,264 @@
+var glyphs_content = {
+
+    glyphId: m.prop(),
+    current_glyph: function () {
+        if (!glyphs_module.glyphs()) {
+            return undefined;
+        }
+        return get_obj_by_prop_value(glyphs_module.glyphs(), 'id', glyphs_content.glyphId());
+    },
+
+    variants: m.prop(),
+    custom_advance_lines: m.prop({}),
+
+    controller: function (args) {
+        glyphs_content.glyphId(args.itemId);
+        glyphs_content.update_variants_list().then(m.redraw)
+    },
+
+    update_variants_list: function () {
+        return Variants.listByGlyphId(glyphs_content.glyphId()).then(function (r) {
+            glyphs_content.variants(r);
+            m.redraw(true);
+        });
+    },
+
+    // delete_variant: function (variant) {
+    //     Variants.delete(variant);
+    //     glyphs_content.update_variants_list();
+    // },
+
+    make_default: function (variant) {
+        return Variants.make_default(variant).then(function () {
+            return glyphs_content.update_variants_list().then(function() {
+                return fonts_module.update_current_glyphs().then(m.redraw);       // also update the fonts list to show the new glyph.
+            });
+        });
+    },
+
+    edit_variant: function (variant) {
+        var start_image_src = "data:image/png;base64," + variant.image_base64;
+
+        // First get the size of the image as the pixit component needs the image size as argument.
+        var img = new Image();
+        img.onload = function () {
+            var width = img.width;
+            var height = img.height;
+            Modal.module(m(__pixit.app, {
+                saveCb: function saveCb(dataUri) {
+                    var data = dataUri.replace("data:image/png;base64,", "");
+                    variant.image_base64 = data;
+                    Variants.save(variant).then(function () {
+                        Modal.module(null);
+                        glyphs_content.update_variants_list();
+                    })
+                },
+                width: width,
+                height: height,
+                maxWidth: 320,
+                src: start_image_src
+            }));
+        };
+        img.src = start_image_src;
+    },
+
+    set_custom_advance: function (variant) {
+        Modal.module(SetAdvanceForm, variant);
+    },
+
+    copy_variant: function (variant) {
+        var new_variant = Object.assign({}, variant, {isDefault: false});
+        delete new_variant.id;
+        delete new_variant.version;
+        Home.show_home_waiting_overlay();
+        Variants.save(new_variant).then(function () {
+            glyphs_content.update_variants_list().then(Home.hide_home_waiting_overlay);
+        });
+    },
+
+    adjust_baseline: function (variant) {
+        Modal.module(AdjustBaseline, variant);
+    },
+
+    view: function (ctrl) {
+        var cur_font = fonts_module.current_font();
+
+        var current_unit = glyphs_content.current_glyph() ? glyphs_content.current_glyph().unit : null;
+
+        var norm_first_char = glyphs_content.current_glyph()
+            ? remove_diacretics(current_unit.charAt(0))
+            : undefined;
+        var is_show_no_random_warning = chars_for_random.indexOf(norm_first_char) === -1
+            && glyphs_content.variants()
+            && glyphs_content.variants().length > 1;
+
+        var is_max_number_plan_exceed = glyphs_content.variants()
+            && glyphs_content.variants().length > window.gn_config.plan_limits.nr_variants;
+
+        var is_max_number_abs_reached = glyphs_content.variants()
+            && glyphs_content.variants().length >= window.gn_config.max_limits.nr_variants;
+
+        var is_show_variants_hint = glyphs_content.variants() && glyphs_content.variants().length < 2
+            && chars_for_random.indexOf(norm_first_char) !== -1;
+
+        var unit_type = null;
+        if (glyphs_content.current_glyph()) {
+            unit_type = countSymbols(current_unit) > 1
+                ? pl.t('ligature')
+                : pl.t('character')
+        }
+
+        return m('div', [
+
+            glyphs_content.variants() ?
+                [
+                    unit_type
+                        ? m('h4', pl.t('variants_for', {unit_type: unit_type, unit: current_unit}))
+                        : null,
+
+                    glyphs_content.variants().length > 0
+
+                        ? [
+                            is_show_no_random_warning
+                                ? build_message_box(pl.t('glyph_not_randomized') + faq_link('faq-not-randomized'))
+                                : null,
+
+                            is_max_number_plan_exceed && !is_show_no_random_warning
+                                ? build_message_box(
+                                    pl.t('max_number_variants_reached',
+                                        {
+                                            max_nr: window.gn_config.plan_limits.nr_variants,
+                                            current: glyphs_content.variants().length,
+                                            plan: window.gn_config.current_plan
+                                        }
+                                    ) + faq_link('faq-max-reached')
+                                    + '<br>' + pl.t('enjoy_pro_version_by_upgrading', {upgrade_url: window.fe_urls.upgrade_url}))
+
+                                : null,
+
+                            m("div#glpyhs-list", [
+                                glyphs_content.variants().sort(
+                                    function (x, y) {     // sort so that default glyphs comes first
+                                        return (x.isDefault === y.isDefault) ? 0 : x.isDefault ? -1 : 1;
+                                    }
+                                ).map(function (variant) {
+                                    return m("div.variant-detail.card.card-1", [
+                                        m('.variant-detail-img-wrap', m('.variant-detail-img-inner-wrap', [
+                                            m("img",
+                                                {
+                                                    src: "data:image/png;base64," + variant.image_base64,
+                                                    style: {
+                                                        transform: 'translateY(' + variant.base_adjustment * 100 + '%) ' +
+                                                        'scale(' + variant.scale_factor + ')'
+                                                    }
+                                                }
+                                            ),
+                                            build_icon_button('delete',
+                                                {onclick: glyphs_module.delete_variant.bind(glyphs_content, variant)},
+                                                {
+                                                    tooltip: pl.t('Delete this variant.'),
+                                                    classes: '.icon-delete-glyph',
+                                                    icon_classes: '.md-dark'
+                                                }
+                                            ),
+                                            variant.custom_advance || variant.left_bearing || variant.right_bearing
+                                                ? m('i.has-custom-advance.icon.material-icons.md-dark',
+                                                    {'title': pl.t('This character has a custom letter spacing.')},
+                                                    'flip')
+                                                : null,
+
+                                            variant.isDefault
+                                                ? m('i.is-default-variant.icon.material-icons.md-dark',
+                                                    {'title': pl.t('This character is the default variant.')},
+                                                    'bookmark_border')
+                                                : null,
+
+
+                                        ])),
+                                        m(".glyph-button-wrap", [
+
+                                            build_button(
+                                                pl.t('Edit Character'),
+                                                {onclick: glyphs_content.edit_variant.bind(glyphs_content, variant)},
+                                                {
+                                                    tooltip: pl.t('Edit this character with thr paint tool.'),
+                                                    id: 'glyph-option-edit-character'
+                                                }
+                                            ),
+
+                                            // Adjust spacing
+                                            build_button(
+                                                pl.t('adjust_letter_spacing'),
+                                                window.fe_user.is_upgraded
+                                                    ? {
+                                                        // If this variant has a value!=0 for the old 'custom_advance' attribute we show the
+                                                        // dialog, else we will show the new one.
+                                                        onclick: variant.custom_advance === 0
+                                                            ? Modal.module.bind(this, SetBearings, variant)
+                                                            : glyphs_content.set_custom_advance.bind(glyphs_content, variant),
+                                                        title: pl.t('adjust_left_right_spacing_variant')
+                                                    }
+                                                    : {
+                                                        disabled: true,
+                                                        title: pl.t('Adjust Letter spacing is only available for upgraded accounts.'),
+                                                        id: 'glyph-option-adjust-letter-spacing'
+                                                    }
+                                            ),
+
+
+                                            build_button(
+                                                pl.t('Copy character'),
+                                                {
+                                                    onclick: glyphs_content.copy_variant.bind(glyphs_content, variant),
+                                                    disabled: is_max_number_abs_reached,
+                                                    title: is_max_number_abs_reached ? pl.t('You have already created the max. number of variants') : null
+                                                },
+                                                {
+                                                    tooltip: pl.t('Copy this Character.'),
+                                                    id: 'glyph-option-copy-character'
+
+                                                }
+                                            ),
+                                            build_button(
+                                                pl.t('Adjust Baseline/Size'),
+                                                {onclick: Modal.module.bind(this, AdjustBaseline, variant)},
+                                                // {onclick: glyphs_content.adjust_baseline.bind(glyphs_content, variant)},
+                                                {
+                                                    tooltip: pl.t('Adjust baseline of this variant.'),
+                                                    id: 'glyph-option-adkust-baseline'
+                                                }
+                                            ),
+
+
+                                            build_button(
+                                                pl.t('Default Character'),
+                                                {
+                                                    onclick: glyphs_content.make_default.bind(glyphs_content, variant),
+                                                    disabled: variant.isDefault
+                                                },
+                                                {
+                                                    tooltip: pl.t('Make this the default variant.'),
+                                                    id: 'glyph-option-make-default'
+                                                }
+                                            )
+                                        ])
+
+                                    ])
+                                })
+                            ]),
+
+                            is_show_variants_hint
+                                ? m('.content-hint', [
+                                    // m('i.material-icons', 'info_outline'),
+                                    pl.t('glyph_list_variants_howto_hint')
+                                ])
+                                : null
+
+                        ]
+
+                        : m("div", pl.t("no variants yet"))
+                ]
+                : build_centered_spinner(pl.t('Loading Variants.'))
+        ])
+    }
+};

@@ -1,0 +1,432 @@
+/* Dialog content for uploading a filled out template and add the found glyphs to the current font. */
+
+
+var UploadTemplate = {
+
+    max_file_size_upload: 8 * 1024 * 1024,
+    is_show_spinner: m.prop(false),
+
+    vm: {
+        files: m.prop([]),
+        error_msg: m.prop(""),
+        glyphs_to_add: [],
+        replace_existing: m.prop('variants'),
+        add_variants_error: m.prop(),
+        exceeding_variants: [],
+        exceeding_number_glyphs_removeds: [],
+        auto_clean: m.prop(true)
+
+    },
+
+    job: {
+        is_request_send: m.prop(),
+        result: m.prop(),
+        error: m.prop(),
+        finished: m.prop()
+    },
+
+    controller: function () {
+        clear_properties_of_object(UploadTemplate.job);
+        UploadTemplate.vm.files([]);
+        UploadTemplate.vm.error_msg("");
+        UploadTemplate.is_show_spinner(false);
+    },
+
+    validate_upload_form: function () {
+        if (UploadTemplate.vm.files().length === 0) {
+            UploadTemplate.vm.error_msg(pl.t('Please select at least one file to upload.'));
+            m.redraw();
+            return false;
+        }
+        return true;
+    },
+
+    start_request: function () {
+
+        UploadTemplate.job.is_request_send(true);
+        m.redraw(true);
+
+        // collect files and build formData
+        var formData = new FormData;
+        for (var i = 0; i < UploadTemplate.vm.files().length; i++) {
+            formData.append("file" + i, UploadTemplate.vm.files()[i])
+        }
+        formData.append('auto_clean', UploadTemplate.vm.auto_clean());
+
+        window.jsLogger && window.jsLogger.debug("Upload template -> start_request()", {
+            'auto_clean': UploadTemplate.vm.auto_clean(),
+            'nr_files': UploadTemplate.vm.files().length,
+            'current_font_id': fonts_module.current_font_id(),
+            //'fonts_length': fonts_module.fonts().length
+        });
+
+        start_polling_request(
+            "/webapp/template2images/",
+            formData,
+            UploadTemplate.job.finished,
+            UploadTemplate.job.error,
+            function (r) {
+                UploadTemplate.job.result(r);
+                UploadTemplate.vm.glyphs_to_add = r.glyphs.slice();
+                // add an temporary id to the glyphs so we can handle deletions by the user
+                UploadTemplate.vm.glyphs_to_add = UploadTemplate.vm.glyphs_to_add.map(function(g, index) {
+                    g.temp_id = index;
+                    return g;
+                })
+            }
+        );
+    },
+
+    check_max_limits: function () {
+        UploadTemplate.vm.exceeding_number_glyphs_removeds = [];
+        UploadTemplate.vm.exceeding_variants = [];
+
+        // check max number glyphs
+        var units_exist = fonts_module.units()
+            ? fonts_module.units().map(function (glpyh) {
+                return glpyh.unit;
+            })
+            : [];
+        var units_uploaded = UploadTemplate.vm.glyphs_to_add.map(function (glpyh) {
+            return glpyh.chars;
+        });
+        var units_new = units_uploaded.filter(function (u) {
+            return units_exist.indexOf(u) === -1;
+        });
+        var exceeding_number_glyphs = units_exist.length + units_new.length - window.gn_config.max_limits.nr_glyphs;
+        UploadTemplate.vm.exceeding_number_glyphs_removeds = units_new.splice(0, exceeding_number_glyphs);
+
+        // check max number variant per glyph
+        if (fonts_module.units()
+            && UploadTemplate.vm.replace_existing() === 'variants')      // in case of replace we don't have to check.
+        {
+            for (var i = 0; i < units_uploaded.length; i++) {
+                var existing_glyph = get_obj_by_prop_value(fonts_module.units(), 'unit', units_uploaded[i]);
+                if (existing_glyph && existing_glyph.variants.length >= window.gn_config.max_limits.nr_variants) {
+                    UploadTemplate.vm.exceeding_variants.push(existing_glyph.unit);
+                }
+            }
+        }
+    },
+
+    save_new_glyphs_and_update: function () {
+
+        window.jsLogger && window.jsLogger.debug("Upload template -> save_new_glyphs_and_update()", {
+            'current_font_id': fonts_module.current_font_id(),
+            //'fonts_length': fonts_module.fonts().length,
+            'nr_fonts_add': UploadTemplate.vm.glyphs_to_add.length
+        });
+
+        UploadTemplate.is_show_spinner(true);
+        m.redraw(true);
+
+        // Remove the chars which have been select to be removed in check_max_limits()
+        UploadTemplate.vm.glyphs_to_add = UploadTemplate.vm.glyphs_to_add.filter(function (g) {
+            return UploadTemplate.vm.exceeding_variants.indexOf(g.chars) === -1
+                && UploadTemplate.vm.exceeding_number_glyphs_removeds.indexOf(g.chars) === -1
+        });
+
+
+        // If there is currently no font selected (because there is not font yet) we will create a new font
+        // and add the glyphs/variants to this new font.
+        if (!fonts_module.current_font_id()) {
+            var new_font_name = "MyFont";
+
+            // there shouldn't be a font named "MyFont" as if there is no font selected we will also select the first
+            // one and then current_font_id shouldn't be undefined. But to be on the safe side ...
+            if (get_obj_by_prop_value(fonts_module.fonts(), 'name', new_font_name)) {
+                window.jsLogger && window.jsLogger.warn("UploadTemplate.save_new_glyphs_and_update: undefined current_font_id but a MyFont exists.");
+                var counter = 1;
+                while (get_obj_by_prop_value(fonts_module.fonts(), 'name', new_font_name + counter)) {
+                    counter++
+                }
+            }
+
+            // create the font and the add the glpyhs.
+            Fonts.save(
+                Fonts.create_new({name: new_font_name})).then(
+                function (fontId) {
+                    fonts_sidedrawer.updateFontsList();
+                    return Fonts.byId(fontId).then(
+                        function (font) {
+                            // fonts_module.switch_active_font(font);
+                            return Fonts.addAllGlyphVariants(font, UploadTemplate.vm.glyphs_to_add).then(function () {
+                                    Modal.module(null);
+                                    return fonts_module.switch_active_font(font).then(m.redraw);
+                                }
+                            )
+                        }
+                    );
+                }
+            ).catch(function (e) {
+                window.jsLogger && window.jsLogger.warn("save_new_glyphs_and_update() in create new Font " + e.message + " new_font_name: " + new_font_name);
+                UploadTemplate.vm.add_variants_error(e.message);
+                m.redraw();
+            });
+        }
+        else {
+            // A font exists, we have to consider if we have to replace or add variants.
+            // if overwrite mode then delete existing units/chars.
+            var glyphUnitsToRemove = UploadTemplate.vm.glyphs_to_add.map(function (g) {
+                return g.chars;
+            }).filter(function () {
+                return UploadTemplate.vm.replace_existing() === 'overwrite'
+            });
+
+            return Variants.listByUnitList(fonts_module.current_font_id(), glyphUnitsToRemove).then(function (variantsArray) {
+
+                Variants.deleteBulk(variantsArray).then(function () {
+
+                    // add new ones
+                    return Fonts.addAllGlyphVariants(fonts_module.current_font(), UploadTemplate.vm.glyphs_to_add).then(function () {
+                            Modal.module(null);
+                            return fonts_module.update_current_glyphs().then(m.redraw);
+                        }
+                    )
+                }).catch(Dexie.ConstraintError, function (e) {       // catching a Dexie error doesn't work when user is upgraded a there would come an error from the backend first.
+                    window.jsLogger && window.jsLogger.warn("save_new_glyphs_and_update() in create new Font _else_: " + e.message);
+                    UploadTemplate.vm.add_variants_error(e.message);
+                    m.redraw()
+                });
+            });
+
+        }
+    },
+
+    // remove a file from the file upload list.
+    delete_from_files: function (index) {
+        var files = UploadTemplate.vm.files();
+        files.splice(index, 1);
+        UploadTemplate.vm.files(files);
+        m.redraw();
+    },
+
+    view_form: function () {
+        return [
+            m(".form.upload-templates-files", [
+                m('h3', pl.t('Upload Template')),
+                m('p', m.trust(pl.t('select_mulitple_files_or_add_later'))),
+
+                UploadTemplate.vm.files().length <= 5
+                    ? [
+                        UploadTemplate.vm.files().length === 0
+                            ? m("label", pl.t('Select a file: '))
+                            : m("label", pl.t('Add another file: ')),
+                        m('input#template-upload-fileinput', {
+                            type: 'file',
+                            onchange: function (e) {
+                                if (e.target.files.length > 0 && e.target.files[0].size > UploadTemplate.max_file_size_upload) {
+                                    show_toast(pl.t("This file is to large. Max. allowed file size is")+ ' '
+                                        + Math.round(UploadTemplate.max_file_size_upload / 1024 / 1024) + 'MB.');
+                                    return;
+                                }
+
+                                UploadTemplate.vm.files(Array.from(e.target.files).concat(UploadTemplate.vm.files()));
+                                if (UploadTemplate.vm.files().length > 0) {
+                                    UploadTemplate.vm.error_msg("")
+                                }
+                                document.getElementById('template-upload-fileinput').value = "";
+                            }
+
+                        })]
+                    : m('div', pl.t('Max. number of files reached.')),
+                UploadTemplate.vm.error_msg() ? m('.error', UploadTemplate.vm.error_msg()) : null,
+                m('div.files', UploadTemplate.vm.files().map(function (file, index) {
+                        return m('.a-file', [m('span', file.name + ' '),
+                            m('i.material-icons.md-dark.delete-file-icon.clickable',
+                                {
+                                    onclick: UploadTemplate.delete_from_files.bind(this, index),
+                                    title: pl.t('Remove this file')
+                                },
+                                'delete')])
+                    })
+                ),
+
+                build_checkbox("template-upload-scrub", pl.t("Automatically groom templates."), UploadTemplate.vm.auto_clean,
+                    {form_name: 'auto_clean'},
+                    {tooltip: pl.t("template_upload_auto_clean_tooltip")}),
+
+                // build_form_buttons(UploadTemplate.start_request, pl.t('Upload Template'))
+                m(__mdl_helper.form_buttons, {
+                    action_func: UploadTemplate.start_request,
+                    action_label: pl.t('Upload Template'),
+                    validator: UploadTemplate.validate_upload_form,
+                    action_button_id: 'upload-template-submit-files-button'
+                })
+            ])
+        ]
+    },
+
+    view_result: function () {
+        if (UploadTemplate.is_show_spinner()) {
+            var add_hint = UploadTemplate.vm.glyphs_to_add.length > 100 && window.fe_user.is_authenticated
+                ? '<br>'+pl.t('Please be patient, this might take some time.')
+                : '';
+            return m('div', [
+                m('h3', pl.t('Please wait.')),
+                build_centered_spinner(m.trust(pl.t('Adding new characters.') + add_hint))
+            ])
+        }
+
+        UploadTemplate.check_max_limits();
+
+        // Split to single char/liga and sort for displaying new ones.
+        var single_glyphs = UploadTemplate.vm.glyphs_to_add.filter(function (item) {
+            return countSymbols(item.chars) === 1;
+        }).sort(function (a, b) {
+            return a.chars.codePointAt(0) - b.chars.codePointAt(0);
+        });
+
+        var ligatures = UploadTemplate.vm.glyphs_to_add.filter(function (item) {
+            return countSymbols(item.chars) > 1;
+        }).sort(function (a, b) {
+            return a.chars.localeCompare( b.chars );
+        });
+
+
+        // do we have to show the "delete existing" part?
+        var overlap = false;
+        var existingGlyphUnits = fonts_module.units()
+            ? fonts_module.units().map(function (glpyh) {
+                return glpyh.unit;
+            })
+            : [];
+        for (var i = 0; i < UploadTemplate.vm.glyphs_to_add.length; i++) {
+
+            if (existingGlyphUnits.indexOf(UploadTemplate.vm.glyphs_to_add[i].chars) !== -1) {
+                overlap = true;
+                break;
+            }
+        }
+
+        var r = UploadTemplate.job.result();
+
+        var nothing_found_in_templates = r.number_templates > 0 && r.glyphs.length === 0;
+
+        // Create the view
+        return m("#upload-template-result", [
+            m('h3', pl.t('Result')),
+
+            r.number_templates === 0
+                ? m('div', pl.t('No Template found to process'))
+                : m('div', pl.t('template upload result', {
+                    nr_glyphs: r.glyphs.length,
+                    nr_templates: r.number_templates
+                }))
+            ,
+
+            nothing_found_in_templates
+                ? m('div', m.trust(snippets['no_template_detected_hint']))
+                : null,
+
+            r.user_messages.length
+                ? m('.upload-add-notes', [
+                    m('h5', pl.t('Additional Notes')),
+                    m('ul', [
+                        r.user_messages.map(function (item) {
+                            return m('li', m.trust(Array.isArray(item) ? pl.t(item[0], item[1]) : pl.t(item)));
+                        })
+                    ])
+                ]) : null,
+
+            overlap
+                ? [
+                    m('h5', pl.t('How to proceed with already existing characters?')),
+                    build_radio_list(
+                        '',
+                        {
+                            'overwrite': pl.t('Overwrite existing characters.'),
+                            'variants': pl.t('Create variants.')
+                        },
+                        UploadTemplate.vm.replace_existing,
+                        {},
+                        {tooltip: pl.t('Upload templates overwrite tooltip')}
+                    )
+                ]
+                : null,
+
+            r.glyphs.length > 0 && (typeof fonts_module.units() === 'undefined' || fonts_module.units().length === 0)
+                ? m('.dialog-hint', [pl.t('upload_font_howto_variants_hint')])
+                : null,
+
+            UploadTemplate.vm.exceeding_variants.length > 0
+            || UploadTemplate.vm.exceeding_number_glyphs_removeds.length > 0
+                ? m('h5', [m('i.material-icons.warning-icon', 'warning'),
+                    pl.t('Warning, max. limits reached.')])
+                : null,
+            UploadTemplate.vm.exceeding_variants.length > 0
+                ? [m('div', pl.t('chars_removed_max_variants_exceeded')),
+                    m('.exceeding-list', UploadTemplate.vm.exceeding_variants.join(' '))]
+                : null,
+            UploadTemplate.vm.exceeding_number_glyphs_removeds.length > 0
+                ? [m('div', pl.t('chars_removed_max_glyphs_exceeded')),
+                    m('.exceeding-list', UploadTemplate.vm.exceeding_number_glyphs_removeds.join(' '))]
+                : null,
+
+
+            // Show all created characters
+            UploadTemplate.vm.glyphs_to_add.length
+                ? [m('h5', pl.t('Character Preview')),
+                    m('div', pl.t('If you are not satisfied with a character ...')),
+
+                    m('#preview-glyphlist', [
+                        single_glyphs.map(function (glyph) {
+                            return UploadTemplate.build_glyphbox(glyph)
+                        }),
+                        ligatures.length
+                            ? [
+                                m('h5', pl.t('Ligatures')),
+                                ligatures.map(function (glyph) {
+                                    return UploadTemplate.build_glyphbox(glyph)
+                                })
+                            ]
+                            : null
+                    ]),
+                    // build_form_buttons(UploadTemplate.save_new_glyphs_and_update, pl.t('Add characters'))
+                    m(__mdl_helper.form_buttons, {
+                        action_func: UploadTemplate.save_new_glyphs_and_update,
+                        action_label: pl.t('Add characters'),
+                        action_button_id: 'upload-template-add-chars-button'
+                    })
+                ]
+                : build_form_buttons(null)      // show only the cancel button if there are no chars to add.
+
+
+        ]);
+    },
+
+    build_glyphbox: function (glyph) {
+        return m(".preview-glyphlist-item.card.card-1.clickable",
+            [
+                m("img.glyph-thumb" + (glyph.chars.length > 1 ? '.ligature' : ''),
+                    {src: "data:image/png;base64," + glyph.base64encoded}),
+                m(".glyph-info", m("div.glyph-name", glyph.chars)),
+                m(".glyph-fullsize-wrap.card.card-3",
+                    m("img.glyph-fullsize", {src: "data:image/png;base64," + glyph.base64encoded})),
+                build_icon_button(
+                    'delete',
+                    {onclick: UploadTemplate.delete_from_selection.bind(this, glyph.temp_id)},
+                    {classes: '.icon-delete-glyph', icon_classes: '.md-dark'}
+                )
+            ])
+    },
+
+    delete_from_selection: function (temp_id) {
+        for (var index = 0; index < UploadTemplate.vm.glyphs_to_add.length; index++) {
+            if (UploadTemplate.vm.glyphs_to_add[index].temp_id === temp_id) {
+                UploadTemplate.vm.glyphs_to_add.splice(index, 1);
+                return;
+            }
+        }
+    },
+
+    view: function () {
+        return polling_view(
+            UploadTemplate.job.is_request_send,
+            UploadTemplate.view_form,
+            UploadTemplate.job.error,
+            UploadTemplate.job.result,
+            UploadTemplate.view_result
+        )
+    }
+};

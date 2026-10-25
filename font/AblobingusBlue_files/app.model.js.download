@@ -1,0 +1,61 @@
+/* global __pixit, m */
+
+__pixit.appModel = {
+  /**
+   * Getter/setter that stores the drawing canvas container
+   *
+   * @return {HTMLCanvasElement}
+   */
+  canvasContainer: m.prop(null),
+
+  /**
+   * Getter/setter that stores the drawing canvas
+   *
+   * @return {HTMLCanvasElement}
+   */
+  drawingCanvas: m.prop(null),
+
+  /**
+   * Getter/setter that stores the drawing canvas' max zoomed copy, which is the final source of
+   * truth for the state
+   *
+   * @return {HTMLCanvasElement}
+   */
+  canvasCopy: m.prop(null),
+
+  /**
+   * Getter/setter that stores the preview canvas
+   *
+   * @return {HTMLCanvasElement}
+   */
+  previewCanvas: m.prop(null),
+
+  /**
+   * Cache the rightCol element, needed to calculate the position of the cursor's shade
+   *
+   * @return {HTMLDivElement}
+   */
+  rightCol: m.prop(null),
+
+  /**
+   * Getter/setter that stores the canvas that follows the cursor when it's moved on the drawing
+   * canvas
+   *
+   * @return {HTMLCanvasElement}
+   */
+  cursorShade: m.prop(null),
+
+  /**
+   * Reset all elements when unloading the app component
+   *
+   * @this appModel
+   */
+  reset: function reset() {
+    // this.canvasContainer(null);
+    this.drawingCanvas(null);
+    // this.canvasCopy(null);
+    // this.previewCanvas(null);
+    this.rightCol(null);
+    this.cursorShade(null);
+  }
+};

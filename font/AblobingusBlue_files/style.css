@@ -1,0 +1,161 @@
+#previewCanvas-wrap { min-width: 300px; min-height: 100px; padding-right: 20px;  margin-bottom: 3em;}
+#pixit-wrap { overflow: hidden}
+#pixit-wrap .canvasContainer { display: inline-block;}
+#pixit-wrap .canvasContainer { max-width: 600px; max-height: 800px; overflow: scroll}
+#pixit-wrap #save-cancel-wrap { margin-top: 1em; text-align: right;}
+
+#pixit-wrap #previewCanvas-wrap { display: none;}
+#pixit-wrap #brushes-wrap { width: 110px;}
+#pixit-wrap .leftCol .icons { width: 140px;}
+#pixit-wrap .slider { width: 200px; }
+
+/* GENERAL */
+
+#pixit-wrap .no {
+    display: none;
+}
+
+#pixit-wrap .click {
+    cursor: pointer;
+}
+
+#pixit-wrap .cntr {
+    margin: 0 auto;
+}
+
+#pixit-wrap .md-36 {
+    font-size: 36px;
+}
+
+#pixit-wrap .buttons {
+    text-align: right;
+}
+
+/* OVERRIDE MATERIAL DESIGN */
+
+#pixit-wrap .mdl-button {
+    font-size: 16px;
+    font-weight: 400;
+}
+
+#pixit-wrap .mdl-slider,
+#pixit-wrap .mdl-slider__background-flex {
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+/* SHARED */
+
+#pixit-wrap .previewCanvas,
+#pixit-wrap .canvasContainer {
+    margin: 0 auto;
+    border: 2px solid #bdbdbd;
+}
+
+#pixit-wrap .previewCanvas,
+#pixit-wrap .canvasContainer,
+#pixit-wrap .slider,
+#pixit-wrap .icons {
+    margin-bottom: 20px;
+}
+
+#pixit-wrap .previewCanvas,
+#pixit-wrap .drawingCanvas,
+#pixit-wrap .cursorShade {
+    image-rendering: optimizeSpeed; /* Older versions of FF */
+    image-rendering: -moz-crisp-edges; /* FF 6.0+ */
+    image-rendering: -webkit-optimize-contrast; /* Safari */
+    image-rendering: -o-crisp-edges; /* OS X & Windows Opera (12.02+) */
+    image-rendering: pixelated; /* Awesome future-browsers */
+    -ms-interpolation-mode: nearest-neighbor; /* IE */
+}
+
+/* LAYOUT */
+
+#pixit-wrap .container {
+    border: 1px solid #000;
+    margin: 0 auto;
+    padding: 20px;
+    width: 1280px;
+}
+
+#pixit-wrap .leftCol {
+    vertical-align: top;
+}
+
+#pixit-wrap .rightCol {
+    min-width: 300px;
+    position: relative;
+    vertical-align: middle;
+    text-align: center;
+
+}
+
+/* PREVIEW & BRUSHES */
+
+#pixit-wrap .previewCanvas { max-width: 100%; }
+
+#pixit-wrap .sliderLabel,
+#pixit-wrap .brushTitle {
+    color: #000;
+    font: 16px "Roboto";
+    margin-bottom: 10px;
+    opacity: .87;
+}
+
+#pixit-wrap .brushTitle {
+    font-weight: bold;
+}
+
+#pixit-wrap .sliderLabel { display: inline-block    }
+#pixit-wrap .icon {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+}
+
+#pixit-wrap .brush {
+    color: #616161;
+    margin-right: 10px;
+}
+
+#pixit-wrap .brush:hover,
+#pixit-wrap .selected {
+    color: #673AB7;
+}
+
+/* DRAWING CANVAS */
+
+#pixit-wrap .canvasContainer {
+    box-sizing: border-box;
+    overflow: auto;
+    position: relative;
+}
+
+#pixit-wrap .mousePlayground {
+    position: absolute;
+    z-index: 2;
+}
+
+#pixit-wrap .cursorShade {
+    position: absolute;
+    z-index: 1;
+}
+
+#pixit-wrap .spinnerContainer {
+    margin: 0 auto;
+    position: relative;
+}
+
+#pixit-wrap .spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-right: -50%;
+    transform: translate(-50%, -50%)
+}
+
+#pixit-undo-button {
+    float: left;
+}

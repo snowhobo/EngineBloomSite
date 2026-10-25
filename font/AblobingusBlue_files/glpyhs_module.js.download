@@ -1,0 +1,75 @@
+var glyphs_module = {
+    urlPath: "glyphs",
+    label: "Glyphs",
+    // icon_key: "content_copy",
+
+    glyphs: m.prop([]),         // Isn't this overlapping/same as fonts_module.units()?
+    variants: m.prop(),
+
+    // components
+    sidedrawer: glyphs_sidedrawer,
+    content: glyphs_content,
+    toolbar: glyphs_toolbar,
+    footer_right: glyphs_footer_right,
+
+    switch_active_glyph: function (glyph) {
+        glyphs_content.glyphId(glyph.id);
+        glyphs_content.update_variants_list();
+    },
+
+    delete_variant: function (variant) {
+
+        function func(vr) {
+            Home.show_home_waiting_overlay();
+            var glyphId = vr.glyphId;
+            return Variants.delete(vr).then(function () {
+                // if there is no more variant for a glyph we also delete the glyph.
+                return Variants.listByGlyphId(glyphId).then(function(variantList){
+                   if (variantList.length === 0) {
+                       return Glyphs.detail(glyphId).then(function(glyph) {
+                           return Glyphs.delete(glyph).then(function() {
+                               return glyphs_content.update_variants_list();
+                           });
+                       })
+                   }
+                   else {
+                       return glyphs_content.update_variants_list();
+                   }
+                });
+
+            }).then(Home.hide_home_waiting_overlay);
+        }
+
+        show_are_your_sure_dialog({
+            text: pl.t('delete_this_variant?'),
+            button_label: pl.t('Delete'),
+            dontaskagain_key: 'delete_variant',
+            action_function: func.bind(this, variant)
+        });
+
+        // Modal.module(AreYouSureDialog, {
+        //     text: pl.t('delete_this_variant?'),
+        //     button_label: pl.t('Delete'),
+        //     dontaskagain_key: 'delete_variant',
+        //     action_function: func.bind(this, variant)
+        // });
+    },
+
+    create_empty_variant: function () {
+        // create a dataUrl for an empty png
+        var canvas = document.createElement('canvas');
+        canvas.width = 250;
+        canvas.height = 350;
+        var dataURL = canvas.toDataURL();
+        var data = dataURL.split(",")[1];    // cut of the "data:image/png;base64," part
+        var new_variant = Variants.create_new({
+            image_base64: data,
+            glyphId: glyphs_content.glyphId()
+        });
+        Variants.save(new_variant).then(function () {
+            glyphs_content.update_variants_list();
+        });
+    }
+};
+
+modules[glyphs_module.urlPath] = glyphs_module;

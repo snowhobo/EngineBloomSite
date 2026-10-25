@@ -1,0 +1,751 @@
+//submodule helper
+// function submodule(module, args) {
+// 	return module.view.bind(this, new module.controller(args))
+// }
+
+
+// Enables setting properties instead of functions in inlined event handlers
+// see https://gist.github.com/mindeavor/0bf02f1f21c72de9fb49
+m.setValue = function (obj, prop) {
+    return m.withAttr('value', function (value) {
+        obj[prop] = value
+    })
+};
+
+
+function convertToSlug(Text) {
+    return Text
+        .toLowerCase()
+        .replace(/[^\w ]+/g, '')
+        .replace(/ +/g, '-')
+        ;
+}
+
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function updateMdl() {
+    if (window && window.componentHandler) {
+        window.componentHandler.upgradeDom();
+    }
+}
+
+function make_rand_string() {
+    var text = "";
+    var possible = "abcdefghijklmnopqrstuvwxyz";
+    for (var i = 0; i < 10; i++)
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    return text;
+}
+
+
+function clear_properties_of_object(obj) {
+    var vm_props = Object.getOwnPropertyNames(obj);
+    for (var i = 0; i < vm_props.length; i++) {
+        obj[vm_props[i]](null);
+    }
+}
+
+
+function slugify(text) {
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
+}
+
+
+/**
+ * Creates the views for the different stages of a polling view. form -> processing -> result or error.
+ * result and form have to provided, processing and error are generic.
+ * @param is_request_send_func
+ * @param form_view_func
+ * @param error_func
+ * @param result_func
+ * @param result_view_func
+ * @returns {*}
+ */
+function polling_view(is_request_send_func, form_view_func, error_func, result_func, result_view_func) {
+    if (!is_request_send_func()) {
+        return form_view_func();
+    } else {
+        if (error_func()) {
+            var error_key = undefined;
+            var dict = {};
+
+            var error_obj = error_func();
+            // If it is not an object check if it is JSON represantion of an error.
+            if (!isObject(error_func())) {
+                try {
+                    error_obj = JSON.parse(error_func());
+                } catch (e) {
+                    window.jsLogger && window.jsLogger.debug("polling_view: Could not parse as json: " + error_func)
+                }
+            }
+            // If the error object is an object and has an error object get the error atrribute.
+            // If this error object contains an Array it is for the ployglot replacement function.
+            // Eg. ["error desc %{repl1} %{repl2}", {repl1: 'asdsads', repl2: 'sds'}]
+            if (isObject(error_obj) && error_obj.hasOwnProperty("error")) {
+                error_key = error_obj.error;
+                if (Array.isArray(error_obj.error)) {
+                    error_key = error_obj.error[0];
+                    dict = error_obj.error[1];
+                }
+            } else {
+                error_key = error_obj;
+
+            }
+            var msg = pl.t('An unexpected server error happened. Please try again.');
+            if (pl.has(error_key)) {
+                msg = pl.t(error_key, dict);
+            } else {
+                window.jsLogger && window.jsLogger.info('polling_view(): Unexpected error object ' + error_obj + '  error_key: ' + error_key)
+            }
+
+            var msg_header = pl.t(error_key + '_header', {'_': pl.t('Oops! Something went wrong.')});
+
+            return m('.error-message-wrap', [
+                m('h3', msg_header),
+                m(".error-message", m.trust(msg)),
+                build_message_buttons()
+            ])
+        } else if (result_func()) {
+            return result_view_func();
+        } else {
+            return [m("h3.waiting-header", pl.t("Processing")),
+                // m('.waiting-spinner-wrap',  m('span', m(".mdl-spinner.mdl-js-spinner.mdl-spinner--single-color.is-active") ) )
+                build_centered_spinner(pl.t('Please wait.'))
+            ]
+        }
+    }
+
+}
+
+
+/**
+ * Wrapper around send_request and poll_for_result. Used to include error handling.
+ * For params see send_request and poll_for_result
+ */
+function start_polling_request(url,
+                               data,
+                               finished_prop_func,
+                               error_prop_func,
+                               result_prop_func,
+                               callback) {
+
+    window.jsLogger && window.jsLogger.debug('start_polling_request', {url: url});
+
+    fetch_post(url, data)
+        .then(
+            function (result) {
+                if (result.hasOwnProperty('error')) {
+                    error_prop_func(result.error);
+                    m.redraw(true);
+                } else {
+                    poll_for_result(result.jobId, finished_prop_func, error_prop_func, result_prop_func, callback);
+                }
+            }
+        );
+}
+
+
+/**
+ * Helper method to poll for queued jobs results.
+ * The URL to be polled is expected to return:
+ * return JsonResponse({
+        'finished': job.result is not None or job.is_failed is True,
+        'is_failed': job.is_failed,
+        'result': job.result,
+    })
+ * @param job_id Job Id to poll for.
+ * @param finished_prop_func Function to set current finished state (True or False). Will be called multiple times.
+ * @param error_prop_func Function to set error message.
+ * @param result_prop_func Function to set result of job.
+ * @param callback, Optional, will be called, with job.result as parameter, if failed or successful.
+ */
+function poll_for_result(job_id, finished_prop_func, error_prop_func, result_prop_func, callback) {
+    var time_out = 670 * 1000;      // Should be at least QUEUE_TTL+PRCESSING_TIMEOUT, see web/webapp/create_error_entry_view.py
+
+    var url = "/webapp/poll_for_result/";       // todo4: read from config, written by django in app_home.html
+    var msAtStart = new Date().getTime();
+
+    var pollFunc = function () {
+        // Check for timeout
+        var msCurrent = new Date().getTime();
+        var timeTakenYet = msCurrent - msAtStart;
+        if (timeTakenYet > time_out) {
+            // window.jsLogger && window.jsLogger.warn(sprintf("poll_for_result.pollFunc: Timed out after %s: jobid: %s", time_out, job_id));
+            window.jsLogger && window.jsLogger.info('poll_for_result.pollFunc: Timed out', {
+                jobid: job_id,
+                after_s: timeTakenYet
+            });
+            error_prop_func('Result_polling_timed_out');
+            m.redraw();
+            return;
+        }
+
+        fetch_post(url,
+            {
+                jobId: job_id,
+                is_upgraded: window.fe_user.is_upgraded
+            })
+            .then(function (job) {
+                window.jsLogger && window.jsLogger.debug("poll_for_result fetch_post.then():", job);
+
+                if (!job.hasOwnProperty('finished')) {
+                    window.jsLogger && window.jsLogger.warn("Resulting job has no expected 'finished' property " + job)
+                }
+
+                finished_prop_func(job.finished);
+
+                if (job.error) {
+                    error_prop_func(job.error);
+                } else if (job.finished) {
+                    if (job.is_failed) {        // old: use the above job.error condition track and remove this
+                        error_prop_func(true);
+                    } else if (job.result && job.result.error) {    // for expected errors like wrong filetypes uploaded. We have error message here.
+                        error_prop_func({error: job.result.error})
+                    } else {
+                        result_prop_func(job.result);
+                    }
+                    if (callback) {
+                        callback(job.result);
+                    }
+                    m.redraw(true);
+                } else {
+                    // increment time to wait between polling every time
+                    var time_to_wait = 2000 + Math.min(parseInt(timeTakenYet / 10), 4000);
+                    setTimeout(pollFunc, time_to_wait);
+                }
+            })
+    };
+    setTimeout(pollFunc, 2500);
+}
+
+
+function range_from_to(start, end) {
+    var r = [];
+    for (var i = start; i <= end; i++) {
+        r.push(i);
+    }
+    return r;
+}
+
+// Use this function instead of checking with length to check if a glyph is singe char or ligature
+// see https://mathiasbynens.be/notes/javascript-unicode
+var regexAstralSymbols = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+
+function countSymbols(string) {
+    return string
+        // Replace every surrogate pair with a BMP symbol.
+        .replace(regexAstralSymbols, '_')
+        // …and *then* get the length.
+        .length;
+}
+
+//
+// function countSymbols(string) {
+//     // see https://mathiasbynens.be/notes/javascript-unicode
+//     return punycode.ucs2.decode(string).length;
+// }
+
+
+// see https://mathiasbynens.be/notes/javascript-unicode
+function splitUnicode(string) {
+    var index = 0;
+    var length = string.length;
+    var output = [];
+    for (; index < length - 1; ++index) {
+        var charCode = string.charCodeAt(index);
+        if (charCode >= 0xD800 && charCode <= 0xDBFF) {
+            charCode = string.charCodeAt(index + 1);
+            if (charCode >= 0xDC00 && charCode <= 0xDFFF) {
+                output.push(string.slice(index, index + 2));
+                ++index;
+                continue;
+            }
+        }
+        output.push(string.charAt(index));
+    }
+    output.push(string.charAt(index));
+    return output;
+}
+
+// sprintf
+!function (e) {
+    "use strict";
+
+    function t() {
+        var e = arguments[0], r = t.cache;
+        return r[e] && r.hasOwnProperty(e) || (r[e] = t.parse(e)), t.format.call(null, r[e], arguments)
+    }
+
+    function r(e) {
+        return "number" == typeof e ? "number" : "string" == typeof e ? "string" : Object.prototype.toString.call(e).slice(8, -1).toLowerCase()
+    }
+
+    function n(e, t) {
+        return t >= 0 && 7 >= t && i[e] ? i[e][t] : Array(t + 1).join(e)
+    }
+
+    var s = {
+        not_string: /[^s]/,
+        not_bool: /[^t]/,
+        not_type: /[^T]/,
+        not_primitive: /[^v]/,
+        number: /[diefg]/,
+        numeric_arg: /bcdiefguxX/,
+        json: /[j]/,
+        not_json: /[^j]/,
+        text: /^[^\x25]+/,
+        modulo: /^\x25{2}/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^\)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
+        key: /^([a-z_][a-z_\d]*)/i,
+        key_access: /^\.([a-z_][a-z_\d]*)/i,
+        index_access: /^\[(\d+)\]/,
+        sign: /^[\+\-]/
+    };
+    t.format = function (e, a) {
+        var i, o, l, c, p, f, u, g = 1, _ = e.length, d = "", b = [], h = !0, x = "";
+        for (o = 0; _ > o; o++) if (d = r(e[o]), "string" === d) b[b.length] = e[o]; else if ("array" === d) {
+            if (c = e[o], c[2]) for (i = a[g], l = 0; l < c[2].length; l++) {
+                if (!i.hasOwnProperty(c[2][l])) throw new Error(t('[sprintf] property "%s" does not exist', c[2][l]));
+                i = i[c[2][l]]
+            } else i = c[1] ? a[c[1]] : a[g++];
+            if (s.not_type.test(c[8]) && s.not_primitive.test(c[8]) && "function" == r(i) && (i = i()), s.numeric_arg.test(c[8]) && "number" != r(i) && isNaN(i)) throw new TypeError(t("[sprintf] expecting number but found %s", r(i)));
+            switch (s.number.test(c[8]) && (h = i >= 0), c[8]) {
+                case"b":
+                    i = parseInt(i, 10).toString(2);
+                    break;
+                case"c":
+                    i = String.fromCharCode(parseInt(i, 10));
+                    break;
+                case"d":
+                case"i":
+                    i = parseInt(i, 10);
+                    break;
+                case"j":
+                    i = JSON.stringify(i, null, c[6] ? parseInt(c[6]) : 0);
+                    break;
+                case"e":
+                    i = c[7] ? parseFloat(i).toExponential(c[7]) : parseFloat(i).toExponential();
+                    break;
+                case"f":
+                    i = c[7] ? parseFloat(i).toFixed(c[7]) : parseFloat(i);
+                    break;
+                case"g":
+                    i = c[7] ? parseFloat(i).toPrecision(c[7]) : parseFloat(i);
+                    break;
+                case"o":
+                    i = i.toString(8);
+                    break;
+                case"s":
+                    i = String(i), i = c[7] ? i.substring(0, c[7]) : i;
+                    break;
+                case"t":
+                    i = String(!!i), i = c[7] ? i.substring(0, c[7]) : i;
+                    break;
+                case"T":
+                    i = r(i), i = c[7] ? i.substring(0, c[7]) : i;
+                    break;
+                case"u":
+                    i = parseInt(i, 10) >>> 0;
+                    break;
+                case"v":
+                    i = i.valueOf(), i = c[7] ? i.substring(0, c[7]) : i;
+                    break;
+                case"x":
+                    i = parseInt(i, 10).toString(16);
+                    break;
+                case"X":
+                    i = parseInt(i, 10).toString(16).toUpperCase()
+            }
+            s.json.test(c[8]) ? b[b.length] = i : (!s.number.test(c[8]) || h && !c[3] ? x = "" : (x = h ? "+" : "-", i = i.toString().replace(s.sign, "")), f = c[4] ? "0" === c[4] ? "0" : c[4].charAt(1) : " ", u = c[6] - (x + i).length, p = c[6] && u > 0 ? n(f, u) : "", b[b.length] = c[5] ? x + i + p : "0" === f ? x + p + i : p + x + i)
+        }
+        return b.join("")
+    }, t.cache = {}, t.parse = function (e) {
+        for (var t = e, r = [], n = [], a = 0; t;) {
+            if (null !== (r = s.text.exec(t))) n[n.length] = r[0]; else if (null !== (r = s.modulo.exec(t))) n[n.length] = "%"; else {
+                if (null === (r = s.placeholder.exec(t))) throw new SyntaxError("[sprintf] unexpected placeholder");
+                if (r[2]) {
+                    a |= 1;
+                    var i = [], o = r[2], l = [];
+                    if (null === (l = s.key.exec(o))) throw new SyntaxError("[sprintf] failed to parse named argument key");
+                    for (i[i.length] = l[1]; "" !== (o = o.substring(l[0].length));) if (null !== (l = s.key_access.exec(o))) i[i.length] = l[1]; else {
+                        if (null === (l = s.index_access.exec(o))) throw new SyntaxError("[sprintf] failed to parse named argument key");
+                        i[i.length] = l[1]
+                    }
+                    r[2] = i
+                } else a |= 2;
+                if (3 === a) throw new Error("[sprintf] mixing positional and named placeholders is not (yet) supported");
+                n[n.length] = r
+            }
+            t = t.substring(r[0].length)
+        }
+        return n
+    };
+    var a = function (e, r, n) {
+        return n = (r || []).slice(0), n.splice(0, 0, e), t.apply(null, n)
+    }, i = {
+        0: ["", "0", "00", "000", "0000", "00000", "000000", "0000000"],
+        " ": ["", " ", "  ", "   ", "    ", "     ", "      ", "       "],
+        _: ["", "_", "__", "___", "____", "_____", "______", "_______"]
+    };
+    "undefined" != typeof exports ? (exports.sprintf = t, exports.vsprintf = a) : (e.sprintf = t, e.vsprintf = a, "function" == typeof define && define.amd && define(function () {
+        return {sprintf: t, vsprintf: a}
+    }))
+}("undefined" == typeof window ? this : window);
+
+
+function create_uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
+ * Throws and Error if there are more then one objects with the given property value.
+ * @param array_of_objects
+ * @param property
+ * @param value
+ * @returns {*}
+ */
+function get_obj_by_prop_value(array_of_objects, property, value) {
+    if (typeof array_of_objects === 'undefined') {
+        window.jsLogger && window.jsLogger.warn("get_obj_by_prop_value received undefined for array. prop:" + property + " value:" + value);
+        return undefined;
+    }
+    var all_found = array_of_objects.filter(function (obj) {
+        return obj[property] === value;
+    });
+    if (all_found.length === 0) {
+        return undefined;
+    } else if (all_found.length > 1) {
+        throw Error(sprintf("Found %s items with a property %s of %s.", all_found.length, property, value));
+    }
+    return all_found[0]
+}
+
+function filter_obj_by_prop_value(array_of_objects, property, value) {
+    return array_of_objects.filter(function (obj) {
+        return obj[property] === value;
+    });
+}
+
+
+function remove_obj_by_prop_value(array_of_objects, property, value) {
+    return array_of_objects.filter(function (obj) {
+        return obj[property] !== value;
+    });
+}
+
+
+function sleepFor(sleepDuration) {
+    var now = new Date().getTime();
+    while (new Date().getTime() < now + sleepDuration) { /* do nothing */
+    }
+}
+
+
+/**
+ * Enhanced fetch function with timeout, retry logic, and error handling
+ * @param {string} url - The URL to fetch
+ * @param {string} type - The HTTP method (GET, POST, PUT, DELETE)
+ * @param {Object|FormData} data - The data to send with the request
+ * @param {Object} options - Additional options
+ * @param {number} options.timeout - Request timeout in milliseconds (default: 30000)
+ * @param {number} options.retries - Number of retry attempts (default: 2)
+ * @param {number} options.retryDelay - Delay between retries in milliseconds (default: 1000)
+ * @returns {Promise} - Promise resolving to the response data
+ */
+function do_fetch(url, type, data, options = {}) {
+    const {
+        timeout = 90000,
+        retries = 2,
+        retryDelay = 1000
+    } = options;
+    
+    let attempt = 0;
+    
+    function executeRequest() {
+        attempt++;
+        
+        var headers = {
+            "X-CSRFToken": Cookies.get("csrftoken"),
+            'Accept': 'application/json, text/*'
+        };
+
+        if (!(data instanceof FormData)) {
+            headers['content-type'] = 'application/json';
+            data = JSON.stringify(data);
+        }
+
+        var request_config = {
+            headers: headers,
+            credentials: 'same-origin',
+            method: type,
+            referrerPolicy: 'no-referrer-when-downgrade'
+        };
+
+        if (type === 'POST' || type === 'PUT') {
+            request_config['body'] = data;
+        }
+
+        if (url !== '/webapp/poll_for_result/') {
+            window.jsLogger && window.jsLogger.debug("fetch", {
+                url: url, 
+                request_type: type,
+                attempt: attempt
+            });
+        }
+        
+        // Create a timeout promise that rejects after the specified time
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error(`Request timeout after ${timeout}ms`));
+            }, timeout);
+        });
+        
+        // Race the fetch against the timeout
+        return Promise.race([
+            fetch(url, request_config),
+            timeoutPromise
+        ])
+        .then(function(response) {
+            if (response.status === 403) {
+                window.jsLogger && window.jsLogger.warn("403 for fetch.", {url: url});
+                // Reloading to force login
+                window.location.reload(true);
+                return false;     // not sure if necessary.
+            }
+
+            if (!response.ok) {
+                // For 5xx errors, we might want to retry
+                if (response.status >= 500 && response.status < 600 && attempt <= retries) {
+                    window.jsLogger && window.jsLogger.warn("Server error, retrying...", {
+                        url: response.url,
+                        status: response.status,
+                        attempt: attempt,
+                        maxRetries: retries
+                    });
+                    
+                    return new Promise(resolve => {
+                        setTimeout(() => resolve(executeRequest()), retryDelay * attempt);
+                    });
+                }
+                
+                window.jsLogger && window.jsLogger.error("do_fetch() Error Response", {
+                    url: response.url,
+                    status: response.status,
+                    statusText: response.statusText,
+                    attempt: attempt
+                });
+                return {error: response.statusText};
+            }
+
+            if (type === 'DELETE' && response.status === 204) {
+                return "";
+            }
+
+            var contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                return response.json();
+            }
+
+            return response.text().then(function(text) {
+                window.jsLogger && window.jsLogger.warn("Unexpected response type", {
+                    url: response.url,
+                    status: response.status,
+                    contentType: contentType,
+                    text: text.substring(0, 100) // Log only first 100 chars
+                });
+                return text;
+            });
+        })
+        .catch(function(error) {
+            // Network errors or timeouts - retry if we have attempts left
+            if (attempt <= retries && 
+                (error.name === 'TypeError' || error.message.includes('timeout'))) {
+                window.jsLogger && window.jsLogger.warn("Network error, retrying...", {
+                    url: url,
+                    error: error.message,
+                    attempt: attempt,
+                    maxRetries: retries
+                });
+                
+                return new Promise(resolve => {
+                    setTimeout(() => resolve(executeRequest()), retryDelay * attempt);
+                });
+            }
+            
+            window.jsLogger && window.jsLogger.error("fetch error in do_fetch()", {
+                url: url,
+                request_type: type,
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+                attempt: attempt
+            });
+            throw(error);
+        });
+    }
+    
+    return executeRequest();
+}
+
+/**
+ * Wrapper for POST requests
+ * @param {string} url - The URL to fetch
+ * @param {Object|FormData} data - The data to send
+ * @param {Object} options - Additional options (timeout, retries, retryDelay)
+ * @returns {Promise} - Promise resolving to the response data
+ */
+function fetch_post(url, data, options = {}) {
+    return do_fetch(url, 'POST', data, options);
+}
+
+/**
+ * Wrapper for GET requests
+ * @param {string} url - The URL to fetch
+ * @param {Object} options - Additional options (timeout, retries, retryDelay)
+ * @returns {Promise} - Promise resolving to the response data
+ */
+function fetch_get(url, options = {}) {
+    return do_fetch(url, 'GET', null, options);
+}
+
+function set_get_for_property(obj, property_name) {
+    return function (value) {
+        if (value) {
+            obj[property_name] = value;
+        } else {
+            return obj[property_name];
+        }
+    }
+}
+
+function normalize_unicode(string) {
+    return string.normalize('NFC');
+}
+
+function remove_diacretics(str) {
+    // normalize()ing to NFD Unicode normal form decomposes combined graphemes into the combination of simple ones.
+    // The è of Crème ends up expressed as e + ̀.
+    // Using a regex character class to match the U+0300 → U+036F range, to globally get rid of the diacritics,
+    // which the Unicode standard conveniently groups as the Combining Diacritical Marks Unicode block.
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+}
+
+function isObject(obj) {
+    return obj === Object(obj);
+}
+
+compareObjectsOneLevel = function (o1, o2) {
+    for (var p in o1) {
+        if (o1.hasOwnProperty(p)) {
+            if (o1[p] !== o2[p]) {
+                return false;
+            }
+        }
+    }
+    for (var p in o2) {
+        if (o2.hasOwnProperty(p)) {
+            if (o1[p] !== o2[p]) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+function arrayRotate(arr, reverse) {
+    if (reverse)
+        arr.unshift(arr.pop());
+    else
+        arr.push(arr.shift());
+    return arr
+}
+
+function arrayRotateByCount(arr, count) {
+    count -= arr.length * Math.floor(count / arr.length);
+    arr.push.apply(arr, arr.splice(0, count));
+    return arr
+}
+
+/**
+ * Shuffles array in place.
+ * @param {Array} a items The array containing the items.
+ */
+function shuffleArray(a) {
+    var j, x, i;
+    for (i = a.length; i; i--) {
+        j = Math.floor(Math.random() * i);
+        x = a[i - 1];
+        a[i - 1] = a[j];
+        a[j] = x;
+    }
+}
+
+function uniqueArraySorted(array) {
+    var temp = array.reduce(function (previous, current) {
+        previous[current] = true;
+        return previous;
+    }, {});
+
+    return Object.keys(temp).sort();
+}
+
+function uniqueArray(array) {
+    var temp = array.reduce(function (previous, current) {
+        previous[current] = true;
+        return previous;
+    }, {});
+
+    return Object.keys(temp);
+}
+
+// Stringify with circular protecxtion and max size limit.
+stringifyOnce = function (obj, replacer, indent) {
+    var printedObjects = [];
+    var printedObjectKeys = [];
+
+    function printOnceReplacer(key, value) {
+        if (printedObjects.length > 100) { // browsers will not print more than 20K, I don't see the point to allow 2K.. algorithm will not be fast anyway if we have too many objects
+            return 'object too long';
+        }
+        var printedObjIndex = false;
+        printedObjects.forEach(function (obj, index) {
+            if (obj === value) {
+                printedObjIndex = index;
+            }
+        });
+
+        if (key === '') { //root element
+            printedObjects.push(obj);
+            printedObjectKeys.push("root");
+            return value;
+        } else if (printedObjIndex + "" !== "false" && typeof (value) === "object") {
+            if (printedObjectKeys[printedObjIndex] === "root") {
+                return "(pointer to root)";
+            } else {
+                return "(see " + ((!!value && !!value.constructor) ? value.constructor.name.toLowerCase() : typeof (value)) + " with key " + printedObjectKeys[printedObjIndex] + ")";
+            }
+        } else {
+
+            var qualifiedKey = key || "(empty key)";
+            printedObjects.push(value);
+            printedObjectKeys.push(qualifiedKey);
+            if (replacer) {
+                return replacer(key, value);
+            } else {
+                return value;
+            }
+        }
+    }
+
+    return JSON.stringify(obj, printOnceReplacer, indent);
+};

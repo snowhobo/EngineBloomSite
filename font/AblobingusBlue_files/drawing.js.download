@@ -1,0 +1,208 @@
+/* global __pixit, m, Uint8ClampedArray */
+
+__pixit.drawing = (function drawing() {
+  /**
+   * On a given ImageData, turn all pixels to either opaqueColors or transparent depending on a
+   * given opacity threshold
+   *
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} x
+   * @param {number} y
+   * @param {number} size
+   * @param {number} opacity - Opacity level for the resulting ImageData, from 0 to 255
+   * @param {number[]} opaqueColors - Array of 3 numbers, representing the RGB channels
+   * @return {ImageData}
+   */
+  function opaqueImageData(ctx, x, y, size, opacity, opaqueColors) {
+    var imgData = ctx.getImageData(x, y, size, size);
+    var data = imgData.data;
+    var len = data.length;
+
+    var threshold = Math.floor(opacity / 2);
+    // opaquing to black-white if the opaqueColors are 0,0,0
+    var toBw = opaqueColors.reduce(function reduce(sum, el) {
+      return sum + el;
+    }, 0) === 0;
+
+    var result = ctx.createImageData(imgData);
+
+    for (var i = 0; i < len; i += 4) {
+      var isAlphaOpaque = data[i + 3] > threshold;
+      var isBlack = data[i] <= threshold;
+
+      for (var j = 0; j <= 2; j++) {
+        if (toBw) {
+          result.data[i + j] = isBlack ?  opaqueColors[j] : 255;
+        } else {
+          result.data[i + j] = isAlphaOpaque ? opaqueColors[j] : 255;
+        }
+      }
+
+      result.data[i + 3] = isAlphaOpaque ? opacity : 0;
+    }
+
+    return result;
+  }
+
+
+
+
+    /**
+   * Opaque the ImageData drawn on the given canvas and coords, and then put the result back on the
+   * canvas
+   *
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {CanvasCoords} coords
+   * @param {number} size
+   * @param {boolean} isShade - If true, opaque the shade colors; otherwise, use black/white
+   */
+  function opaqueDrawnShape(ctx, coords, size, isShade) {
+    var opacity = 255;
+    var opaqueColors = [0, 0, 0];
+
+    if (isShade) {
+      opacity = __pixit.SHADE_OPACITY * 255;
+      opaqueColors = __pixit.SHADE_RGB;
+    }
+
+    ctx.putImageData(
+      opaqueImageData(ctx, coords.x, coords.y, size, opacity, opaqueColors),
+      coords.x, coords.y
+    );
+  }
+
+  /**
+   * Draw the currently selected shape on the given canvas' context
+   *
+   * @param {HTMLCanvasElement} canvas
+   * @param {CanvasCoords} coords - Starting coordinates of the shape
+   * @param {number} size
+   * @param {boolean} [isShade] - Set to true when drawing the shape of the cursor's shade so it
+   * keeps its color
+   */
+  function drawShape(canvas, coords, size, isShade) {
+
+    var vm = __pixit.appVm;
+    var shapes = __pixit.shapes;
+    var ctx = canvas.getContext('2d');
+    var rectFn;
+
+    if (!isShade) {
+      rectFn = vm.isErasing() ? 'clearRect' : 'fillRect';
+      ctx.fillStyle = vm.isErasing() ? '#fff' : '#000';
+      ctx.strokeStyle = vm.isErasing() ? '#fff' : '#000';
+    } else {
+      rectFn = 'fillRect';
+    }
+
+    switch (vm.shapeVal()) {
+      case shapes.SQUARE.val:
+        ctx[rectFn](coords.x, coords.y, size, size);
+
+        break;
+
+      case shapes.CIRCLE.val:
+        ctx.beginPath();
+        ctx.arc(coords.x + size / 2, coords.y + size / 2, size / 2, 0, 2 * Math.PI);
+        ctx.fill();
+
+        opaqueDrawnShape(ctx, coords, size, isShade);
+
+        break;
+
+      case shapes.VERTICAL_LINE.val:
+        ctx[rectFn](coords.x, coords.y, 1, size);
+
+        break;
+
+      case shapes.HORIZONTAL_LINE.val:
+        ctx[rectFn](coords.x, coords.y, size, 1);
+
+        break;
+
+      /**
+       * Instead of drawing the line directly on the destination canvas, use a temporary one of
+       * the size to be drawn, because otherwise the line generates pixels on the margin of the
+       * slashes corners that should be white but are too gray and end up being blackened by the
+       * opaqueImageData fn. This way, the size of the canvas plan_limits the size of the slash and
+       * nothing weird appears on the corners
+       */
+      case shapes.SLASH.val:
+      case shapes.BACKSLASH.val:
+        var tmpCanvas = getCanvasCopy(null, size, size);
+        var tmpCtx = tmpCanvas.getContext('2d');
+        tmpCtx.lineWidth = 2;
+        tmpCtx.strokeStyle = vm.isErasing() ? '#fff' : '#000';
+
+        var isSlash = vm.shapeVal() === shapes.SLASH.val;
+
+        tmpCtx.beginPath();
+        tmpCtx.moveTo(isSlash ? 0 : size, size);
+        tmpCtx.lineTo(isSlash ? size : 0, 0);
+        tmpCtx.stroke();
+
+        opaqueDrawnShape(tmpCtx, { x: 0, y: 0 }, size, isShade);
+        ctx.drawImage(tmpCanvas, coords.x, coords.y);
+
+        break;
+    }
+  }
+
+  /**
+   * Prevent smoothing so pixels are visible
+   *
+   * @param {CanvasRenderingContext2D} ctx
+   */
+  function disableSmoothing(ctx) {
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  /**
+   * Clear the given canvas, and then scale it to the current zoom and copy on it the provided img
+   *
+   * @param {HTMLCanvasElement} canvas
+   * @param {HTMLCanvasElement} img
+   */
+  function clearAndDrawScaled(canvas, img) {
+
+    var zoom = __pixit.appVm.zoomVal();
+    var ctx = canvas.getContext('2d');
+    disableSmoothing(ctx);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(zoom, zoom);
+    ctx.drawImage(img, 0, 0);
+    ctx.restore();
+  }
+
+  /**
+   * Create an empty canvas of the same size as the given canvas, or width/height
+   *
+   * @param {?HTMLCanvasElement} canvas
+   * @param {number} [width]
+   * @param {number} [height]
+   * @return {HTMLCanvasElement}
+   */
+  function getCanvasCopy(canvas, width, height) {
+    var canvasCopy = document.createElement('canvas');
+
+    var w = canvas ? canvas.width : width;
+    var h = canvas ? canvas.height : height;
+
+    canvasCopy.width = w;
+    canvasCopy.height = h;
+
+    return canvasCopy;
+  }
+
+  return {
+    drawShape: drawShape,
+    disableSmoothing: disableSmoothing,
+    clearAndDrawScaled: clearAndDrawScaled,
+    getCanvasCopy: getCanvasCopy
+  };
+})();

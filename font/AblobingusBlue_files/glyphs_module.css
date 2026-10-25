@@ -1,0 +1,126 @@
+
+/*    VARAINTS_LIST  */
+
+#glyph-sidedrawer { margin-left: 0; padding-left:0;}
+#glyph-sidedrawer li { display: inline-block; min-width: 2.5em; text-align: center; margin-right: 0.25em; margin-bottom: 0.25em;
+    font-size: 1em; padding:0.5em;}
+#glyph-sidedrawer li.active { background-color: #00bcd4 }
+
+
+
+/* CONTENT */
+
+.variant-detail { display: inline-block; padding-bottom: 0.5em; margin-right: 2em; margin-bottom: 2em; position: relative;}
+
+
+#page-content-glyphs .glyph-button-wrap button { display: block; width: 100%; text-align: left;}
+#page-content-glyphs .variant-detail-img-wrap { position: relative; text-align: center; margin: 1em; }
+#page-content-glyphs .variant-detail-img-inner-wrap { border: 1px solid #ddd; position: relative; display: inline-block; overflow: hidden }
+#page-content-glyphs .variant-detail-img-wrap img {  height: 100%; max-height: 250px;}
+#page-content-glyphs .icon-delete-glyph { position: absolute; bottom: -3px; right: -4px;}
+
+#page-content-glyphs .glyph-button-wrap button.mdl-button { font-weight: 400 }
+
+/* CUSTOM ADVANCE DIALOG */
+/* this will be obsole if the set advance dialog is deprected by the SetBearing dialog. */
+/*.variant-detail .custom-advance-marker { position: absolute; left:80%;top:10%;height:80%; width:1px; border: 1px solid greenyellow;}*/
+i.has-custom-advance.icon { position: absolute; top: 2px; right: 2px; font-size: 20px;}
+i.is-default-variant.icon { position: absolute; top: 2px; left: -1px; font-size: 20px;}
+
+
+/* SET BEARING DIALOG */
+#set-bearings-tool-wrap { border: 1px solid #eee; position: relative}
+
+#set-bearings-image { margin: 0 auto; display: block;}
+
+
+#set-bearings-image-cursor-left { position: absolute; height: 100%; background-color: rgba( 185,255,239,0.125); top:0;
+    left:0; border-right: 2px solid rgb(167,255,235);}
+
+#set-bearings-image-cursor-right { position: absolute; height: 100%; background-color: rgba(103,58,183, 0.125); top:0;
+    right:0; border-left: 2px solid rgb(103,58,183);}
+
+#set-bearings-slider-wrap-right { float: right; text-align: right; margin-top: 1em; color: rgb(103,58,183)}
+
+#set-bearings-slider-wrap-left { clear: both; color: rgb(0,191,165);}
+
+.set-bearings-default { position: absolute; top:0; height: 100%; width: 0px; border: 0; border-left: 1px dashed #ccc;}
+
+.set-bearings-slider  { width: 100%;}
+
+/*Baseline Adjustment Dialog*/
+#base-adjust-dialog { width: 900px;}
+
+#base-adjust-dialog #glyphs-selection-visible-wrap { position: relative; overflow: hidden; }
+
+#base-adjust-dialog .variant-box { display: inline-block; margin: 0 4px; text-align: center; border-left: 1px solid #eee;
+    padding-left: 3px; }
+
+#base-adjust-dialog #right-side .variant-box:first-child { border: 0; padding-left: 0 }
+
+#base-adjust-dialog .variant-box img.variant-box-image { display: block; height: 100%; margin: 0 auto; }
+
+#base-adjust-dialog #left-side {
+    border-right: 2px solid #00bcd4;
+    /*display: flex;    !* does not work in IE11 *!*/
+    padding-right: 4px; position: absolute; right: 50%; text-align: right; white-space: nowrap; }
+#base-adjust-dialog #right-side {
+    border-left: 2px solid #00bcd4;
+    /*display: flex; !* does not work in IE11 *!*/
+    padding-left: 4px; position: absolute; left: 50%; text-align: left; white-space: nowrap;}
+
+
+#base-adjust-dialog #adjust-box { position: absolute; left: 50%; height: 100%; }
+#base-adjust-dialog #adjust-box-image { display: block; padding: 0 2px; height: 100%}
+
+#base-adjust-dialog #current-unit-hint-wrap { width: 100%; position: relative; height: 28px;}
+#base-adjust-dialog #current-unit-hint { position: absolute; top:0px; left: 50%; transform: translateX(-50%);
+    background-color: #888; color: white; padding: 2px; border-radius: 2px; text-decoration: underline;
+    font-size: 18px}
+
+#base-adjust-dialog #control-wrap, #base-adjust-dialog #scale-control-wrap {
+    text-align: center; margin: 1em 0;}
+
+#base-adjust-dialog #arrows-updown-wrap { display: inline-block}
+
+#base-adjust-dialog #arrows-updown-wrap button { margin: 0.125em;}
+
+#base-adjust-dialog #control-wrap #adjust-shift-left-button { display: inline-block; margin-right:10em;}
+#base-adjust-dialog #control-wrap #adjust-shift-right-button { display: inline-block;  margin-left:10em;}
+#base-adjust-dialog #adjust-shuffle-button { display: inline-block; margin-top: 1em;}
+
+#base-adjust-dialog #glyphs-selection-visible-wrap .adjust-helpline { position: absolute; left:0; width: 100%;
+    height: 0; border-top: 1px solid rgba(90,90,90,0.25);}
+
+
+#base-adjust-dialog .adjust-glyphs-scroll, #base-adjust-dialog #adjust-glyphs-shuffle {
+    position: absolute; bottom: 3px; z-index: 99 }
+#base-adjust-dialog #adjust-glyphs-scroll-left { left: 3px}
+#base-adjust-dialog #adjust-glyphs-scroll-right { right: 3px}
+#base-adjust-dialog #adjust-glyphs-shuffle { right: 68px; bottom: 5px; }
+
+#base-adjust-dialog h5 { text-align: center}
+
+#base-adjust-dialog span#baseline-adjust-value, #base-adjust-dialog #scale-value {
+    display: inline-block; text-align: center; width: 50px;}
+
+#base-adjust-dialog #base-adjust-shortcuts-help { position: absolute; bottom: 2.5em; font-size: 80%; }
+
+/*SIDEDRAWER*/
+#glyph-drawer-content { margin-top: 32px;}
+#drawer-glyphs h5 {
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    background-color: #e0e0e0;
+    padding: 16px 20px;
+}
+
+#drawer-glyphs ul#glyph-sidedrawer { padding: 14px 20px;}
+#drawer-glyphs ul#glyph-sidedrawer li  { margin: 2px; border: 1px solid rgba(0,0,0,0.24); background-color: white;}
+#drawer-glyphs ul#glyph-sidedrawer li:hover {box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    transition: all 0.1s cubic-bezier(.25,.8,.25,1);}
+
+#drawer-glyphs ul#glyph-sidedrawer li.active { background-color: #B2DFDB }

@@ -1,0 +1,174 @@
+var fonts_content = {
+
+    contentScrollTop: {},
+
+    controller: function (args) {
+        return {
+            onunload: function () {
+                if (fonts_module.current_font_id
+                    && document.getElementsByClassName('mdl-layout__content').length>=1) {
+                    fonts_content.contentScrollTop[fonts_module.current_font_id()] =
+                        document.getElementsByClassName('mdl-layout__content')[0].scrollTop;
+                }
+            }
+        }
+    },
+
+    build_glyphbox: function (glyph) {
+        // get default variant
+        var default_variant = glyph.variants.length > 0 ? glyph.variants[0] : null;
+        for (var i = 0; i < glyph.variants.length; i++) {
+            if (glyph.variants[i].isDefault === true) {
+                default_variant = glyph.variants[i];
+                break;
+            }
+        }
+
+        return m("li.card.card-1", [
+            m("a[href='/" + glyphs_module.urlPath + "/" + glyph.id + "']",
+                {config: m.route},
+                [
+                    glyph.variants.length > 0
+                        ? m("img.glyph-thumb",
+                            {
+                                src: "data:image/png;base64," + default_variant.image_base64,
+                                style: {
+                                    transform: 'translateY(' + default_variant.base_adjustment * 100 + '%) ' +
+                                    'scale(' + default_variant.scale_factor + ')'
+                                }
+                            })
+                        : m("div.no-variant"),
+                ]),
+
+            m("div.glyph-name", glyph.unit), // countSymbols(glyph.unit) == 1 ? glyph.unit + " " + glyph.unit.codePointAt(0) : glyph.unit),
+
+            m('.glyph-counter', glyph.variants.length),
+
+            build_icon_button(
+                'delete',
+                {onclick: fonts_content.delete_glyph.bind(fonts_content, glyph)},
+                {classes: '.icon-delete-glyph', icon_classes: '.md-dark'}
+            )
+
+
+        ])
+    },
+
+
+    delete_glyph: function (glyph, e) {
+        e.stopPropagation();
+        e.preventDefault();
+        show_are_your_sure_dialog({
+            text: pl.t('delete_this_variant?'),
+            button_label: pl.t('Delete'),
+            dontaskagain_key: 'delete_glyph',
+            action_function: fonts_module.delete_glyph.bind(this, glyph)
+        });
+    },
+
+    view: function () {
+
+
+        if (typeof(fonts_module.fonts()) == "undefined"
+            || ( typeof(fonts_module.units()) == "undefined" && fonts_module.fonts().length > 0 )) {
+            return build_centered_spinner(pl.t('Loading ...'))
+        }
+        if (fonts_module.fonts().length == 0) {
+            return m("#fonts-dashboard.dashboard-block", m.trust(snippets.font_dashboard))
+        }
+
+        // Split units to single chars and ligatures and sort them
+        var single_glyphs = fonts_module.units().slice();
+        single_glyphs = single_glyphs.filter(function (item) {
+            return countSymbols(item.unit) == 1;
+        });
+        single_glyphs.sort(function (a, b) {
+            return a.unit.codePointAt(0) - b.unit.codePointAt(0);
+        });
+        var ligatures = fonts_module.units().slice();
+        ligatures = ligatures.filter(function (item) {
+            return countSymbols(item.unit) > 1;
+        });
+        ligatures.sort(function (a, b) {
+            return a.unit.localeCompare(b.unit);
+        });
+
+        // check if plan limits are reached
+        var more_than_max_nr_glpyhs = fonts_module.units()
+            && fonts_module.units().length > window.gn_config.plan_limits.nr_glyphs;
+
+        var more_than_max_nr_variants = fonts_module.units() && !window.fe_user.is_upgraded &&
+            fonts_module.units().reduce(function (acc, glyph) {
+                return acc || glyph.variants.length > window.gn_config.plan_limits.nr_variants;
+            }, false);
+
+
+        return m("#fonts-content-wrap",
+            {
+                config: function () {
+                    // scroll to last position
+                    if (fonts_content.contentScrollTop
+                        && document.getElementsByClassName('mdl-layout__content').length>=1
+                        && fonts_module.current_font_id()
+                    ) {
+                        document.getElementsByClassName('mdl-layout__content')[0].scrollTop =
+                            fonts_content.contentScrollTop[fonts_module.current_font_id()];
+                    }
+                }
+            },
+            [
+
+                m("div#glyphlist", [
+                    fonts_module.current_font()
+                        ? [
+
+                            more_than_max_nr_glpyhs || more_than_max_nr_variants
+                                ? build_message_box(
+                                    (more_than_max_nr_glpyhs ?
+                                        pl.t('max_number_glyphs_reached_plan',
+                                            {
+                                                max_nr: window.gn_config.plan_limits.nr_glyphs,
+                                                current: fonts_module.units().length,
+                                                plan: window.gn_config.current_plan
+                                            }) : '')
+                                    + (more_than_max_nr_glpyhs && more_than_max_nr_variants ? m.trust('<br>') : '')
+                                    + (more_than_max_nr_variants ?
+                                        pl.t('max_number_variants_reached_plan') : '')
+                                    + faq_link('faq-max-reached')
+                                    + '<br>' + pl.t('enjoy_pro_version_by_upgrading', {upgrade_url: window.fe_urls.upgrade_url})
+                                )
+
+                                : null,
+
+                            // List of glyphs
+                            single_glyphs && single_glyphs.length == 0 ? m("p", pl.t("No characters yet.")) : null,
+
+                            single_glyphs
+                                ? m("ul#glyphs-list", [
+                                    single_glyphs.map(function (glyph) {
+                                        return fonts_content.build_glyphbox(glyph);
+                                    })])
+                                : build_centered_spinner(pl.t('loading characters')),
+
+                            // list of glyphs
+                            ligatures.length > 0
+                                ? m("div", [
+                                    m("h3", pl.t("Ligatures")),
+                                    window.gn_config.current_plan.toLowerCase() == 'free'
+                                        ? build_message_box(pl.t('no_ligatures_in_free_plan'))
+                                        : null,
+                                    m("ul#ligas-list", [
+                                        ligatures.map(function (liga) {
+                                            return fonts_content.build_glyphbox(liga);
+                                        })])
+                                ]) : null
+                        ]
+                        : m("p", pl.t("select a font"))
+
+                ])
+            ])
+
+    }
+
+};
+

@@ -1,0 +1,233 @@
+var SetBearings = {
+
+    variant: m.prop(),
+    cropped_image_data_url: m.prop(),
+    cropped_image_height: m.prop(),
+    cropped_image_width: m.prop(),
+    // real_img_width: m.prop(),
+
+    right_bearing: m.prop(),
+    left_bearing: m.prop(),
+
+
+    save: function () {
+        SetBearings.variant().right_bearing = SetBearings.right_bearing();
+        SetBearings.variant().left_bearing = SetBearings.left_bearing();
+        Variants.save(SetBearings.variant()).then(
+            function () {
+                fonts_module.update_current_glyphs().then(function () {
+                    return glyphs_content.update_variants_list();
+                }).then(function () {
+                    Modal.module(null);
+                    m.redraw(true);
+                });
+            }
+        );
+    },
+
+    controller: function (variant) {
+        // the left/right_bearing property didn't exit from the beginning, therefore there could be objects around with
+        // them being undefined
+        variant.left_bearing = variant.left_bearing !== undefined ? variant.left_bearing : 0;
+        variant.right_bearing = variant.right_bearing !== undefined ? variant.right_bearing : 0;
+
+        SetBearings.variant(variant);
+        SetBearings.right_bearing(variant.right_bearing);
+        SetBearings.left_bearing(variant.left_bearing);
+
+        cropDataUrl(
+            "data:image/png;base64," + variant.image_base64,
+            function (imgUrl, width, height) {
+                SetBearings.cropped_image_data_url(imgUrl);
+                SetBearings.cropped_image_width(width);
+                SetBearings.cropped_image_height(height);
+                m.redraw(true);
+            })
+    },
+
+    reset_bearings: function () {
+        SetBearings.left_bearing(0);
+        SetBearings.right_bearing(0);
+
+        // If there still exists the old property 'custom_advance' reset this also.
+        if (SetBearings.variant().hasOwnProperty('custom_advance')) {
+            SetBearings.variant().custom_advance = 0;
+        }
+        SetBearings.save();
+    },
+
+    view: function (ctrl) {
+
+
+        if (!SetBearings.cropped_image_data_url()) {
+            return build_centered_spinner(pl.t('Loading ...'))
+        }
+
+        var max_bearing = 600;
+
+        var font_glyph_advance = fonts_module.current_font().default_glyph_advance * 100;
+
+
+        var ff_dim = 1000;   // Dimension of fontforge canvas
+        var tool_height = 300;  // Height of our image tool
+        var p_factor = tool_height / ff_dim; // Presentation factor, Factor ui size vs fontforge size
+        var scaled_image_width = SetBearings.cropped_image_width() * tool_height / SetBearings.cropped_image_height();
+        var slider_width = 2 * max_bearing * p_factor;
+        var default_bearing = font_glyph_advance / 2 * p_factor;    // bearing from the default advance of the font. the custom bearing is added to this value.
+        var tool_width = scaled_image_width + 2 * default_bearing + 2 * max_bearing * p_factor;     // width of the complete area
+
+        var default_bearing_marker_dist = (tool_width + scaled_image_width) / 2 + default_bearing;
+
+        var right_cursor_left = default_bearing_marker_dist + (SetBearings.right_bearing() * p_factor);
+
+        // the x_left_cursor_right doesn't specify the x instead it is the distance from the right border. It is used for the right value (css absolute position)
+        // var default_left_cursor_right = (tool_width + scaled_image_width) / 2 + default_bearing;
+        var left_cursor_right = default_bearing_marker_dist + (SetBearings.left_bearing() * p_factor);
+
+
+        return [
+            m('#set-bearings-form',
+                [
+                    m("h3", pl.t('adjust_letter_spacing')),
+
+                    m('div', [
+
+                        m('#set-bearings-tool-wrap',
+                            {style: {width: parseInt(tool_width) + 'px', height: (tool_height + 2) + 'px'}},
+                            [
+                                m("img#set-bearings-image.glyph-thumb", {
+                                    src: SetBearings.cropped_image_data_url(),
+                                    style: {height: tool_height + 'px'}
+                                }),
+
+                                // left
+                                m('#set-bearings-default-left.set-bearings-default',
+                                    {style: {right: parseInt(default_bearing_marker_dist) + 'px'}}),
+
+                                m('#set-bearings-image-cursor-left', {style: {right: parseInt(left_cursor_right) + 'px'}}),
+
+                                // right
+                                m('#set-bearings-default-right.set-bearings-default',
+                                    {style: {left: parseInt(default_bearing_marker_dist) + 'px'}}),
+
+                                m('#set-bearings-image-cursor-right', {style: {left: parseInt(right_cursor_left) + 'px'}}),
+
+
+                            ]),
+
+                        m('#set-bearings-slider-wrap-right.set-bearings-slider-wrap',
+                            {style: {width: slider_width + 'px'}},
+                            [
+                                m(__mdl_helper.slider, {
+                                    id: 'set-bearings-slider-right',
+                                    label: pl.t('Right side spacing'),
+                                    // val: set_get_for_property(SetBearings.variant(), 'right_bearing'),
+                                    val: SetBearings.right_bearing,
+                                    min: -max_bearing,
+                                    max: max_bearing,
+                                    step: 1,
+                                    showMinMax: false,
+                                    showValue: false,
+                                })
+                            ]
+                        ),
+
+                        m('#set-bearings-slider-wrap-left.set-bearings-slider-wrap',
+                            {style: {width: slider_width + 'px'}},
+                            [
+                                m(__mdl_helper.slider, {
+                                    id: 'set-bearings-slider-left',
+                                    label: pl.t('Left side spacing'),
+                                    //val: set_get_for_property(SetBearings.variant(), 'left_bearing'),
+                                    // we have to invert (*-1) the value.
+                                    val: function (value) {
+                                        if (value) {
+                                            SetBearings.left_bearing(-value);
+                                        }
+                                        else {
+                                            return -SetBearings.left_bearing();
+                                        }
+                                    },
+                                    min: -max_bearing,
+                                    max: max_bearing,
+                                    step: 1,
+                                    showMinMax: false,
+                                    showValue: false,
+                                })
+                            ]
+                        ),
+                    ]),
+
+                    m(__mdl_helper.form_buttons, {
+                        action_func: SetBearings.save.bind(this),
+                        action_label: pl.t("Save"),
+                        additional_buttons: [{
+                            action: SetBearings.reset_bearings,
+                            label: pl.t('Use Default')
+                        }]
+                    })
+                ]
+            )
+        ]
+    }
+};
+
+
+// in the adjust baseline dialog there is the same functionality like those both
+function cropDataUrl(dataUrl, callback) {
+    var canvas = document.createElement('canvas');
+
+    var image = new Image();
+    image.onload = function () {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        var ctx = canvas.getContext("2d");
+
+        ctx.drawImage(image, 0, 0);
+
+        var r = cropImageFromCanvasToDataUrl(ctx, canvas);
+        var imgUrl = r[0];
+        var width = r[1];
+        var height = r[2];
+        callback(imgUrl, width, height);
+    };
+    image.src = dataUrl;
+}
+
+// naive, slow implementation, only good for a single, small image
+function cropImageFromCanvasToDataUrl(ctx, canvas) {
+    var w = canvas.width,
+        h = canvas.height,
+        pix = {x: [], y: []},
+        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height),
+        x, y, index;
+    for (y = 0; y < h; y++) {
+        for (x = 0; x < w; x++) {
+            index = (y * w + x) * 4;
+            if ( imageData.data[index + 3] > 0      // not a transparent pixel
+                && imageData.data[index + 0] === 0) {
+
+                pix.x.push(x);
+                // pix.y.push(y);
+
+            }
+        }
+    }
+    pix.x.sort(function (a, b) {
+        return a - b
+    });
+    // pix.y.sort(function (a, b) {
+    //     return a - b
+    // });
+    var n = pix.x.length - 1;
+
+    w = pix.x[n] - pix.x[0] + 1;
+    // h = pix.y[n] - pix.y[0] + 1;
+    var cut = ctx.getImageData(pix.x[0], 0, w, h);
+    canvas.width = w;
+    canvas.height = h;
+    ctx.putImageData(cut, 0, 0);
+
+
+    return [canvas.toDataURL(), w, h]
+}

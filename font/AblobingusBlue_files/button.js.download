@@ -1,0 +1,29 @@
+/* global __pixit, m */
+
+__pixit.button = {
+  /**
+   * @typedef {object} ButtonArgs
+   * @property {string|undefined} class
+   * @property {boolean|undefined} disabled
+   * @property {function} click
+   * @property {string} txt
+   */
+
+  /**
+   * @param {object} ctrl
+   * @param {ButtonArgs} args
+   * @return {VirtualDomEl}
+   */
+  view: function view(ctrl, args) {
+    return m(
+      'button.mdl-button.mdl-js-button',
+      {
+        class: args.class ? args.class : '',
+        id: args.id ? args.id : '',
+        disabled: args.disabled,
+        onclick: args.click
+      },
+      args.txt
+    );
+  }
+};

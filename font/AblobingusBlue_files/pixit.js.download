@@ -1,0 +1,143 @@
+var Pixit = {
+
+    /*
+        layout fuer pixit:  max-width: für canvas_paint,
+        momentan ist der stift verschoben. modal abstand mit einberechnen.
+        Scalierungsauswahl
+        Save button
+        baseline usw anzeigen
+        nth: current pixel unter mouse andeuten
+        reset to original image button
+
+     */
+
+    vm:  {
+
+        canvas_initialized: false,
+        canvas: undefined,
+        ctx: undefined,
+        canvas_paint_initialized: false,
+        canvas_paint: undefined,
+        ctx_paint: undefined,
+        paint: false,
+        image: undefined,
+        current_scale: 4,
+        mouse: {x: 0, y: 0},
+        variant: undefined
+
+
+    },
+
+    // load_image: function(source) {
+    //     Pixit.vm.image = new Image();
+    //     image.onload = function() {
+    //         Pixit.vm.ctx.drawImage(image, 0, 0);
+    //     };
+    //     image.src = source
+    // },
+
+    init_canvas: function (element) {
+        if ( Pixit.vm.canvas_paint_initialized ) return;
+        Pixit.vm.canvas = element;
+        Pixit.vm.ctx = element.getContext("2d");
+        Pixit.vm.canvas_paint_initialized = true;
+    },
+
+    init_canvas_paint: function (element) {
+        if ( Pixit.vm.canvas_initialized ) return;
+        Pixit.vm.canvas_paint = element;
+        Pixit.vm.ctx_paint = element.getContext("2d");
+        Pixit.vm.canvas_initialized = true;
+    },
+
+    load_variant: function(variant) {
+        Pixit.vm.variant = variant;
+        Pixit.vm.image = new Image();
+        Pixit.vm.image.onload = function() {
+            Pixit.vm.canvas.width = Pixit.vm.image.width;
+            Pixit.vm.canvas.height = Pixit.vm.image.height;
+            Pixit.vm.ctx_paint.imageSmoothingEnabled= false;
+            Pixit.vm.ctx.drawImage(Pixit.vm.image, 0, 0);
+
+            Pixit.vm.canvas_paint.width = Pixit.vm.image.width * Pixit.vm.current_scale;
+            Pixit.vm.canvas_paint.height = Pixit.vm.image.height * Pixit.vm.current_scale;
+            Pixit.vm.ctx_paint.scale(Pixit.vm.current_scale, Pixit.vm.current_scale);
+            Pixit.vm.ctx_paint.imageSmoothingEnabled= false;
+            Pixit.vm.ctx_paint.drawImage(Pixit.vm.image, 0, 0);
+
+        };
+        Pixit.vm.image.src = "data:image/png;base64,"+variant.image_base64;
+    },
+
+    onPaint: function() {
+        // Pixit.vm.ctx_paint.lineTo(Pixit.vm.mouse.x/Pixit.vm.current_scale , Pixit.vm.mouse.y/Pixit.vm.current_scale);
+        // Pixit.vm.ctx_paint.stroke();
+        var cur_sc = Pixit.vm.current_scale;
+        var x_o = Pixit.vm.mouse.x;
+        var y_o = Pixit.vm.mouse.y;
+        var x_s = x_o % cur_sc;
+        var y_s = y_o % cur_sc;
+        var x_a = x_o - x_s;
+        var y_a = y_o - y_s;
+        Pixit.vm.ctx_paint.fillRect(x_a/cur_sc, y_a/cur_sc, 1, 1);
+        // ctrl.vm.ctx_paint.fillRect(ctrl.vm.mouse.x/ctrl.vm.current_scale-0.5, ctrl.vm.mouse.y/ctrl.vm.current_scale-0.5, 1, 1);
+
+    },
+
+    copy_image_to_preview: function() {
+        Pixit.vm.ctx.drawImage(Pixit.vm.canvas_paint, 0, 0, Pixit.vm.canvas.width, Pixit.vm.canvas.height);
+    },
+
+    save_and_close: function() {
+        var data_url = Pixit.vm.canvas.toDataURL();
+        Pixit.vm.variant.image_base64 = data_url.split(",")[1];     // cut of the "data:image/png;base64," part
+
+        Pixit.vm.variant.save().then(function() {
+            glyphs_content.update_variants_list();
+            Modal.module(null);
+            m.redraw();
+        });
+
+    },
+
+    controller: function(args) {
+    },
+
+    view: function () {
+        return [
+            m("canvas", {
+                id: "canvas-image",
+                config: Pixit.init_canvas,
+
+                style: { border: "1px solid gray" }
+            }),
+            m("canvas", {
+                id: "canvas-paint",
+                config: Pixit.init_canvas_paint,
+                style: { border: "1px solid gray" },
+                onmousemove: function(e) {
+                    m.redraw.strategy("none");
+                    Pixit.vm.mouse.x = e.pageX - this.offsetLeft;
+                    Pixit.vm.mouse.y = e.pageY - this.offsetTop;
+                },
+                onmousedown: function(e) {
+                    m.redraw.strategy("none");
+                    Pixit.onPaint();
+                    Pixit.vm.canvas_paint.addEventListener('mousemove', Pixit.onPaint, false);
+                },
+                onmouseup: function(e) {
+                    m.redraw.strategy("none");
+                    Pixit.vm.canvas_paint.removeEventListener('mousemove', Pixit.onPaint, false);
+                    Pixit.copy_image_to_preview();
+                }
+            }),
+            m("button", {onclick: Pixit.save_and_close.bind(Pixit)}, pl.t("Save and close"))
+
+        ]
+    }
+};
+
+
+// var sketch_style = getComputedStyle(sketch);
+// canvas.width = parseInt(sketch_style.getPropertyValue('width'));
+// canvas.height = parseInt(sketch_style.getPropertyValue('height'));

@@ -1,0 +1,525 @@
+__mdl_helper = {};  // New style to create helper functions. Will replace the old build_xxx() functions
+
+function build_form_buttons(action_func, action_label, additional_buttons) {
+    // if action is null we just show a close button
+    additional_buttons = additional_buttons || [];
+    return m(".dialog-buttons", [
+        m("button[type=button].mdl-button.mdl-js-button",
+            {onclick: Modal.module.bind(this, null)},
+            action_func ? pl.t('Cancel') : pl.t('Close')),
+        additional_buttons.map(function (button_def) {
+            return m("button[type=button].mdl-button.mdl-js-button",
+                {onclick: button_def.action},
+                button_def.label)
+        }),
+        action_func
+            ? m("button[type=button].mdl-button.mdl-js-button.mdl-button--primary",
+            {
+                onclick: function (event) {
+                    window.jsLogger && window.jsLogger.debug("Button clicked.",
+                        {
+                            function_name: action_func.hasOwnProperty('name') ? action_func.name : 'name_property_not_supported',
+                            label: action_label,
+                        });
+                    action_func();
+                }
+            },
+            action_label)
+            : null
+    ])
+}
+
+__mdl_helper.form_buttons = (function form_buttons() {
+
+    var is_clicked = m.prop(false);
+    var validator = function () {
+        return true
+    };
+
+    function controller(args) {
+        is_clicked(false);
+        if (args.validator) {
+            validator = args.validator
+        } else {
+            validator = function () {
+                return true
+            };
+        }
+    }
+
+    function view(ctrl, args) {
+        // if action is null we just show a close button
+        var additional_buttons = args.additional_buttons || [];
+        var disabled = args.disabled || false;
+        var action_button_id = args.action_button_id ? '#' + args.action_button_id : '';
+
+        return m(".dialog-buttons", [
+
+            m("button[type=button].mdl-button.mdl-js-button",
+                {onclick: Modal.module.bind(this, null)},
+                args.action_func ? pl.t('Cancel') : pl.t('Close')),
+
+            additional_buttons.map(function (button_def) {
+                return m("button[type=button].mdl-button.mdl-js-button",
+                    {onclick: button_def.action},
+                    button_def.label)
+            }),
+            args.action_func
+                ? m("button[type=button]" + action_button_id + ".mdl-button.mdl-js-button.mdl-button--primary",
+                {
+                    onclick: is_clicked() || disabled
+                        ? {disabled: true}
+                        : function (event) {
+                            window.jsLogger && window.jsLogger.debug('Form button clicked',
+                                {
+                                    function_name: args.action_func.hasOwnProperty('name') ? args.action_func.name : 'name_property_not_supported',
+                                    label: args.action_label,
+                                });
+                            if (validator()) {
+                                is_clicked(true);
+                                m.redraw(true);
+                                args.action_func();
+                            }
+                        }
+                },
+                is_clicked() ? pl.t('Processing ...') : args.action_label)
+                : null
+        ])
+    }
+
+    return {
+        view: view,
+        controller: controller
+    };
+})();
+
+
+function build_message_buttons() {
+    return m(".dialog-buttons", [
+        m("button[type=button].mdl-button.mdl-js-button.mdl-button--primary",
+            {onclick: Modal.module.bind(this, null)},
+            pl.t('Close'))
+    ])
+}
+
+function build_icon_button(icon, config, options) {
+    options = options || {};
+    var id = options.id || 'id-' + make_rand_string();
+    var classes = options.classes ? options.classes : '';
+    var icon_classes = options.icon_classes ? options.icon_classes : '';
+    config = Object.assign(config, {id: id});
+    if (options.tooltip) {
+        config = Object.assign(config, {title: options.tooltip});
+    }
+    return m('button.mdl-button.mdl-js-button.mdl-button--icon' + classes, config,
+        m('i.material-icons' + icon_classes, icon));
+    // options.tooltip ? m('.mdl-tooltip.mdl-tooltip--large', {for: id}, options.tooltip) : null
+
+}
+
+function build_button(label, config, options) {
+    options = options || {}
+    var addStr = "";
+    if (options.id) {
+        addStr += "#" + options.id;
+    }
+    if (options.classes) {
+        addStr += "." + options.classes.join('.');
+    }
+    return m("button[type=button].mdl-button.mdl-js-button" + addStr,
+        config, label)
+}
+
+/**
+ *
+ * @param label
+ * @param binding
+ * @param additional_configs will be added to mithrils config param
+ * @param options General options like is_required, error_message, default_error_message, tooltip, field_type
+ * @returns {*[]}
+ */
+function build_text_field(label, binding, additional_configs, options) {
+    additional_configs = additional_configs || {};
+    options = options || {};
+    options.field_type = options.field_type || 'text';
+    var id = options.id || make_rand_string();
+
+    var config = {
+        onchange: m.withAttr('value', binding),
+        value: binding(),
+        required: options.is_required
+    };
+    var addWrapperClass = options.error_message ? '.is-dirty.is-invalid' : '';
+    config = Object.assign(config, additional_configs);
+    return [
+        m(".mdl-textfield.mdl-js-textfield.mdl-textfield--floating-label" + addWrapperClass, [
+            m("input[type=" + options.field_type + "]#" + id + ".mdl-textfield__input", config),
+            m("label.mdl-textfield__label", {for: id}, label),
+            options.error_message
+                ? m("span.mdl-textfield__error", options.error_message)
+                : options.default_error_message ? m("span.mdl-textfield__error", options.default_error_message) : null
+        ]),
+        options.tooltip ? m("div", options.tooltip) : null
+    ];
+
+}
+
+function build_checkbox(id, label, binding_func, additional_configs, options) {
+    additional_configs = additional_configs || {};
+    options = options || {};
+    var config = {onchange: m.withAttr('checked', binding_func), checked: binding_func()};
+    config = Object.assign(config, additional_configs);
+
+    var name_str = "";
+    if (additional_configs.form_name) {
+        name_str = "[name='" + additional_configs.form_name + "']"
+    }
+    // Fix for the checkbox MDL <-> Mithril problem. Without it is not possible to dynamically change the checkbox.
+    if (document.getElementById(id + "-label") && document.getElementById(id + "-label").MaterialCheckbox) {
+        if (binding_func()) {
+            document.getElementById(id + "-label").MaterialCheckbox.check();
+        } else {
+            document.getElementById(id + "-label").MaterialCheckbox.uncheck();
+        }
+    }
+
+    return m('.calli-checkbox-wrap', [
+        options.tooltip ? build_tooltip(options.tooltip) : null,
+        m("label.#" + id + "-label.mdl-checkbox.mdl-js-checkbox.mdl-js-ripple-effect", {for: id}, [
+            m("input[type=checkbox]" + name_str + "#" + id + ".mdl-checkbox__input",
+                config),
+            m("span.mdl-checkbox__label", label)
+
+        ])
+    ]);
+}
+
+// use __mdl_helper.slider instead
+function build_slider(label, binding_func, min, max, step, options) {
+    options = options || {};
+    var id = options.id ? '#' + options.id : "";
+    var add_value = options.show_value ? ": " + binding_func() : '';
+    return m(".calli-slider-wrap" + id, [
+        label ? m("label.slider-label", label + add_value) : null,
+        // m("input[type=range].mdl-slider.mdl-js-slider",
+        m("input[type=range].calli_slider",
+            {
+                onchange: m.withAttr('value', binding_func),
+                value: binding_func(),
+                min: min, max: max, step: step
+            })
+    ])
+}
+
+
+function build_radio_list(label, select_options, binding_func, additional_configs, options) {
+    options = options || {}
+    var rname = make_rand_string();
+    var config = {onchange: m.withAttr('value', binding_func)};
+    config = Object.assign(config, additional_configs);
+
+    // Ugly Fix for the checkbox MDL <-> Mithril problem. Without it is not possible to change the checkbox.
+    Object.keys(select_options).map(function (option_value) {
+        var id = rname + slugify(option_value);
+
+        if (document.getElementById(id + "-label")) {
+            if (binding_func()) {
+                document.getElementById(id + "-label").MaterialRadio.check();
+            } else {
+                document.getElementById(id + "-label").MaterialRadio.uncheck();
+            }
+        }
+    });
+
+
+    return m(".calli-radio-list-wrap", [
+        options.tooltip ? build_tooltip(options.tooltip) : null,
+        m("label.label-" + rname, label + ' '),
+        Object.keys(select_options).map(function (option_value) {
+            var checked = {checked: option_value == binding_func()};
+            var id = rname + slugify(option_value);
+            return m("label.mdl-radio.mdl-js-radio.mdl-js-ripple-effect[for='" + id + "']#" + id + "-label", [
+                m("input[type='radio'][name='" + rname + "'][value='" + option_value + "'].mdl-radio__button#" + id,
+                    Object.assign({}, config, checked)),
+                m("span.mdl-radio__label", select_options[option_value])
+            ])
+        })
+    ])
+}
+
+function build_centered_spinner(text) {
+    return m('.spinner-outer-wrap', [
+        m('.spinner-wrap', [
+            m('.mdl-spinner.mdl-js-spinner.mdl-spinner--single-color.is-active', ' '),
+            m('p', text)
+        ])
+    ])
+}
+
+function show_toast(message) {
+    var notification = document.querySelector('.mdl-js-snackbar');
+    if (notification) {
+        notification.MaterialSnackbar.showSnackbar(
+            {
+                message: message,
+                timeout: 3500
+            }
+        );
+    }
+}
+
+
+function build_toolbar_link(label, config, options) {
+    options = options || {};
+    var class_add = ".clickable";
+    if (options.disabled) {
+        //config = {};
+        class_add += '.disabled'
+    }
+    var id_str = options.id ? '#' + options.id : '';
+    return m("a" + id_str + ".calli-toolbar-link" + class_add, config, label);
+}
+
+function build_message_box(text, options) {
+    options = options || {};
+    return m('.message-box.card.card-1', [
+        m('i.material-icons.md-dark.message-box-icon', options.icon ? options.icon : 'warning'),
+        m('.message-box-text', m.trust(text))
+    ])
+}
+
+
+function show_are_your_sure_dialog(args) {
+    // don't show dialog if dontask_again is enabled and already set by the user.
+    if (args.dontaskagain_key && AreYouSureDialog.dontaskagain_keys.indexOf(args.dontaskagain_key) >= 0) {
+        args.action_function()
+    } else {
+        Modal.module(AreYouSureDialog, args);
+    }
+}
+
+var AreYouSureDialog = {
+    text: m.prop(),
+    button_label: m.prop(),
+    action_function: null,
+    dontaskagain_enabled: m.prop(),
+    dontaskagain_user_checked: m.prop(),
+    dontaskagain_keys: [],
+    dontaskagain_key: m.prop(),
+
+    controller: function (args) {
+        AreYouSureDialog.text(args.text);
+        AreYouSureDialog.button_label(args.button_label);
+        AreYouSureDialog.action_function = args.action_function;
+        AreYouSureDialog.dontaskagain_key(args.dontaskagain_key);
+        AreYouSureDialog.dontaskagain_user_checked(false);
+        if (args.dontaskagain_key) {
+            if (AreYouSureDialog.dontaskagain_keys.indexOf(args.dontaskagain_key) >= 0) {
+                AreYouSureDialog.do_it();
+                Modal.module(null);
+                m.redraw()
+            }
+            AreYouSureDialog.dontaskagain_enabled(true);
+        } else {
+            AreYouSureDialog.dontaskagain_enabled(false);
+        }
+    },
+
+    do_it: function () {
+        if (AreYouSureDialog.dontaskagain_enabled() && AreYouSureDialog.dontaskagain_user_checked()) {
+            AreYouSureDialog.dontaskagain_keys.push(AreYouSureDialog.dontaskagain_key())
+        }
+        AreYouSureDialog.action_function();
+        Modal.module(null);
+        m.redraw()
+    },
+
+    view: function (ctrl) {
+        return [
+            m('.form',
+                [
+                    m(".yesno-text", AreYouSureDialog.text()),
+                    AreYouSureDialog.dontaskagain_enabled()
+                        ? build_checkbox("yusure-dntask-chckbx", pl.t("dont_ask_again_session"), AreYouSureDialog.dontaskagain_user_checked)
+                        : null,
+                    build_form_buttons(AreYouSureDialog.do_it, AreYouSureDialog.button_label())
+                ]
+            )
+        ]
+    }
+};
+
+
+// todo3: Enable the mdl spinner again. replace all current 3 implementations (deprecated, spinner, spinner_percent)
+// to one. Add a m.redraw to onchange.
+__mdl_helper.slider = {
+
+    view: function view(ctrl, args) {
+        // MS sucking browser have problems with mdl styling and the ticks
+        var no_styling = bowser.msedge || bowser.msie;
+        no_styling = true;   //  there is also an bug with chrome on safari. disabling slider for all
+        args.showMinMax = args.showMinMax && !no_styling;
+        args.disabled = args.disabled || false;
+
+        var valueId = args.id + '-value';
+
+        if (document.getElementById(args.id) && !no_styling) {
+            document.getElementById(args.id).MaterialSlider.change(args.val());
+        }
+
+        return m('.slider-wrap', {
+            class: args.class ? args.class : '',
+        }, [
+            build_tooltip(args.tooltip),
+            m('label.sliderLabel', {for: args.id}, [
+                args.label,
+                args.showValue
+                    ? [': ', m('span#' + valueId, args.val())]
+                    : null
+            ]),
+            m(!no_styling
+                ? 'input.mdl-slider.mdl-js-slider'
+                : 'input.calli_slider.slider-edge-fix',  // MS edge browser has problems with the MDL slider
+                {
+                    id: args.id,
+                    type: 'range',
+                    max: args.max,
+                    min: args.min,
+                    step: args.step,
+                    value: args.val(),
+                    onchange: m.withAttr('value', function change(val) {
+                        args.val(Number(val));
+                        if (args.showValue) {
+                            document.getElementById(valueId).innerHTML = val;
+                        }
+                        m.redraw(true)
+                    }),
+                    oninput: m.withAttr('value', function change(val) {
+                        args.val(Number(val));
+                        if (args.showValue) {
+                            document.getElementById(valueId).innerHTML = val;
+                        }
+                    })
+                }),
+
+            args.showMinMax ? m('.slider-scale-wrap', [
+                m('#slider-maxmin-min.slider-maxmin', args.min),
+                m('#slider-maxmin-med.slider-maxmin', (args.min + args.max) / 2),
+                m('#slider-maxmin-max.slider-maxmin', args.max),
+            ]) : null
+        ]);
+    }
+};
+
+// Problem: this should be combined with the __mdl_helper.slider to avoid all the duplicated logic
+__mdl_helper.slider_percent = {
+
+    view: function view(ctrl, args) {
+        // MS sucking browser have problems with mdl styling and the ticks
+        var no_styling = bowser.msedge || bowser.msie;
+        no_styling = true;
+
+        args.showMinMax = args.showMinMax && !no_styling;
+
+        var valueId = args.id + '-value';
+
+        if (document.getElementById(args.id) && !no_styling) {
+            document.getElementById(args.id).MaterialSlider.change(args.val());
+        }
+
+        return m('.slider-wrap.slider-percent-wrap', {
+            class: args.class ? args.class : ''
+        }, [
+            build_tooltip(args.tooltip),
+            m('label.sliderLabel', {for: args.id}, [
+                args.label,
+                args.showValue ? [': ', m('span#' + valueId, Math.round(100 * args.val()) + '%')] : null
+            ]),
+            m(!no_styling
+                ? 'input.mdl-slider.mdl-js-slider'
+                : 'input.calli_slider.slider-edge-fix', {
+                id: args.id,
+                type: 'range',
+                max: args.max,
+                min: args.min,
+                step: args.step,
+                value: args.val(),
+                onchange: m.withAttr('value', function change(val) {
+                    args.val(Number(val));
+                    // if (args.showValue ) {
+                    //     document.getElementById(valueId).innerHTML = Math.round(100 * val) + '%';
+                    // }
+                }),
+                oninput: m.withAttr('value', function change(val) {
+                    args.val(Number(val));
+                    // m.redraw.strategy("none");  // Without this one the slider looses his mdl styling when dragged
+                    // if (args.showValue ) {
+                    //     document.getElementById(valueId).innerHTML = Math.round(100 * val) + '%';
+                    // }
+                })
+            }),
+
+            args.showMinMax ? m('.slider-scale-wrap', [
+                m('#slider-maxmin-min.slider-maxmin', (100 * args.min) + '%'),
+                m('#slider-maxmin-med.slider-maxmin', (100 * (args.min + args.max) / 2) + '%'),
+                m('#slider-maxmin-max.slider-maxmin', (100 * args.max) + '%')
+            ]) : null
+        ]);
+    }
+};
+
+__mdl_helper.text_field = {
+//    (label, binding, additional_configs, options)
+
+    // controller: function() {
+    // },
+
+    view: function (ctrl, args) {
+        var additional_configs = args.additional_configs || {};
+        var options = args.options || {};
+        options.field_type = options.field_type || 'text';
+
+        var config = {
+
+            onchange: m.withAttr('value', function (val) {
+                args.binding(val);
+            }),
+            value: args.binding(),
+            required: options.is_required,
+
+            // The following fixes the "Missing underline if the view is shown a second time" bug
+            onfocus: function (e) {
+                e.currentTarget.parentElement.classList.add('is-focused');
+                m.redraw.strategy("none");
+            },
+            onblur: function (e) {
+                e.currentTarget.parentElement.classList.remove('is-focused');
+                m.redraw.strategy("none");
+            }
+        };
+        var addWrapperClass = options.error_message ? '.is-dirty.is-invalid' : '';
+        config = Object.assign(config, additional_configs);
+
+        componentHandler.upgradeDom();
+
+        return m('.textfield-wrap', [
+            m(".mdl-textfield.mdl-js-textfield.mdl-textfield--floating-label" + addWrapperClass,
+                [
+                    m("input[type=" + options.field_type + "]#" + args.id + ".mdl-textfield__input", config),
+                    m("label.mdl-textfield__label", {for: args.id}, args.label),
+                    options.error_message
+                        ? m("span.mdl-textfield__error", options.error_message)
+                        : options.default_error_message ? m("span.mdl-textfield__error", options.default_error_message) : null
+                ]),
+
+            build_tooltip(options.tooltip)
+
+        ]);
+
+    }
+};
+
+function build_tooltip(tooltip_text) {
+    return tooltip_text ? m('i.form-tooltip.icon.material-icons.md-dark', {'data-tooltip': m.trust(tooltip_text)}, 'info_outline')
+        : null
+}

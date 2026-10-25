@@ -1,0 +1,57 @@
+var misc_charsets = [
+
+    {
+        "name": "Basic Mathematical",
+        "glyphs": "~∠½¼∕°‰ø–—ΓΔΛΞΠΣΦΨΩ∞∘∂∫∮∯∇¬∨∧⊕∀∃⇒→⇔↔∈∉⊂⊄⊆⊈⊃∪∩∖∅−±·×÷²³√∛′″‴∏∑≠≈≝≡≤≥≪≫",
+        "desc": "Commonly used  characters for mathematical notation."
+    }
+    ,
+
+    {
+        "name": "Mathematical",
+        "glyphs": "∀∁∂∃∄∅∆∇∈∉∊∋∌∍∎∏∐∑−∓∔∕∖∗∘∙√∛∜∝∞∟∠∡∢∣∤∥∦∧∨∩∪∫∬∭∮∯∰∱∲∳∴∵∶∷∸∹∺∻∼∽∾∿≀≁≂≃≄≅≆≇≈≉≊≋≌≍≎≏≐≑≒≓≔≕≖≗≘≙≚≛≜≝≞≟≠≡≢≣≤≥≦≧≨≩≪≫≬≭≮≯≰≱≲≳≴≵≶≷≸≹≺≻≼≽≾≿⊀⊁⊂⊃⊄⊅⊆⊇⊈⊉⊊⊋⊌⊍⊎⊏⊐⊑⊒⊓⊔⊕⊖⊗⊘⊙⊚⊛⊜⊝⊞⊟⊠⊡⊢⊣⊤⊥⊦⊧⊨⊩⊪⊫⊬⊭⊮⊯⊰⊱⊲⊳⊴⊵⊶⊷⊸⊹⊺⊻⊼⊽⊾⊿⋀⋁⋂⋃⋄⋅⋆⋇⋈⋉⋊⋋⋌⋍⋎⋏⋐⋑⋒⋓⋔⋕⋖⋗⋘⋙⋚⋛⋜⋝⋞⋟⋠⋡⋢⋣⋤⋥⋦⋧⋨⋩⋪⋫⋬⋭⋮⋯⋰⋱⋲⋳⋴⋵⋶⋷⋸⋹⋺⋻⋼⋽⋾⋿",
+        "desc": "Extended set of characters for mathematical and set notation."
+    }
+    ,
+
+    {
+        "name": "Basic Punctuation",
+        "desc": "Commonly used punctuation characters.",
+        "glyphs": "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~“”‘’"
+    }
+    ,
+    {
+        "name": "Punctuation",
+        "desc": "Extended set of punctuation characters.",
+        "glyphs": "‐‑‒–—―‖‗‘’‚‛“”„‟†‡•‣․‥…‧‰‱′″‴‵‶‷‸‹›" + "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~«»"
+    }
+    ,
+    {
+        "name": "Currencies",
+        "desc": "Symbols for common currencies.",
+        "glyphs": "$€¥£元₩₺₽₹"
+    }
+    ,
+    {
+        "name": "Ligatures",
+        "desc": "Common ligatures for handwriting fonts.",
+        "glyphs": ["ff", "fi", "fl", "Th", "ck", "st", "sp", "qu", "cb", "ch", "sch", "sh", "Sh", "Sch",
+            "th", "Er", "er", "On", "on", "An", "an", "Ch", "St", "mm", "nn", "ee", "ss", "tt", "the", "and", "for", "are",
+            "or", "ing", "ion", "tio", "ent", "ati", "his", "ere", "con", "res", "ter", "tion", "atio", "ther", "ment",
+            "ting", "Qu", "An"]
+    }
+    ,
+    {
+        "name": "Dingbats",
+        "desc": "Ornament symbols.",
+        "glyphs": "✀✁✂✃✄✅✆✇✈✉✊✋✌✍✎✏✐✑✒✓✔✕✖✗✘✙✚✜✝✞✟✠✡✢✤✥✦✧✨✩✪✫✬✭✮✯✰✱✲✳✴✵✶✻✽✾✿❁❂❃❄❅❈❉❊❌❍❎❏❐❑❒❓❔❕❖❗❘❙❚❛❜❝❞❤❥❦❧➀➁➂➃➄➅➆➇➈➉➘➙➚➛➜➝➟➠➡➢➤➥➦➧➨➩➪➫➬➭➮➯➰➱➲➳➴➵➶➷➸➹➺➻➼➽➾➿"
+    }
+
+
+];
+
+
+
+
+
+

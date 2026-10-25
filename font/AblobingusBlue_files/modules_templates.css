@@ -1,0 +1,65 @@
+ul#templates-glyphs-list, ul#templates-ligas-list { list-style: none; padding-left: 0}
+
+#templates-glyphs-list .glyph-wrap, #templates-glyphs-list .liga-wrap { position: relative}
+ul#templates-glyphs-list li , #templates-ligas-list li { display: inline-block; line-height: 1.5em; text-align: center;
+    margin: 0 0.5em 0.5em 0; font-size: 2em;}
+
+ul#templates-glyphs-list li { width: 1.5em; height: 1.5em; }
+ul#templates-ligas-list li { padding-left: 0.5em; padding-right: 0.5em; height: 1.75em; }
+
+/*Sidedrawer*/
+#searchbox-wrap, #search-no-result { margin: 0 20px; width: inherit;  }
+#searchbox-wrap .mdl-textfield {width: inherit; padding-right: 20px; }
+#searchbox-wrap .mdl-textfield__input { width: 160px;  }
+#searchbox-clear-icon { position: absolute; bottom: 20px; right: -34px;}
+
+#drawer-templates .mdl-list__item { padding:0 20px 0 0; width: 100%}
+#drawer-templates .mdl-list__item-primary-content {display: block;}
+#drawer-templates .mdl-list__item .glyph-count { font-size: 90%; float: right; }
+#drawer-templates label>h5 { margin-bottom: 0px;}
+#drawer-templates ul.mdl-list { margin: 0;}
+
+.charset-group-panel h5 { padding: 10px 10px 10px 20px;}
+.active-header  { background-color: #e0e0e0;  }
+
+.charset-group-panel  h5  { margin: 10px 0 20px 0}
+.charset-group-panel  h5.active-header  { margin: 10px 0 20px 0}
+.charset-group-panel .mdl-list { padding: 0; padding-left: 30px; }
+
+
+#create-template-form .label-template-format { display: block }
+#create-template-form .mdl-radio { display: inline-block; margin-right: 2em;}
+
+/* remove the padding at the left and right from the mdl slider. */
+#create-template-form .mdl-slider__background-flex { margin:0; width: 100% }
+#create-template-form .mdl-slider { width: 100%; margin: 0; }
+#create-template-form .calli-slider-wrap { margin-bottom: 1em;}
+
+
+.template-download-wrap { margin-bottom: 2em; }
+
+/* PULSE FOR NEW ELEMENTS */
+.new-element {
+    animation: pulse 1s ease-in-out alternate;
+}
+@keyframes pulse {
+    0% {
+        background: transparent;
+    }
+    50% {
+        background: rgb(100,255,218);
+    }
+    100% {
+        background: transparent;
+    }
+}
+
+
+/* Download Template Dialog */
+#create-template-form .calli-checkbox-wrap {
+    margin-top: 1em;
+}
+
+#create-template-form .calli-slider-wrap {
+    margin-bottom: 3em;
+}

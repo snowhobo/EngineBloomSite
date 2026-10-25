@@ -1,0 +1,127 @@
+var run_counter = 0;        // only for testing purposes
+
+var BuildTemplate = {
+    default_name: "Calligraphr-Template",
+    available_col_nrs: [4, 5, 6, 7, 8, 9, 10],  // inverted, smaller means more ..
+
+    vm: {
+        format: m.prop('pdf'),
+        name: m.prop(),
+        col_nr: m.prop(6),
+        helplines: m.prop(true),
+        background_chars: m.prop(false),
+        prefill: m.prop(),
+    },
+
+    job: {
+        // Job related stuff
+        is_request_send: m.prop(),
+        result: m.prop(),
+        error: m.prop(),
+        finished: m.prop(),
+    },
+
+    controller: function () {
+        clear_properties_of_object(BuildTemplate.job);
+        BuildTemplate.vm.name(BuildTemplate.default_name);
+    },
+
+    start_request: function () {
+        BuildTemplate.job.is_request_send(true);
+
+        // The slider gives us small -> large cell, but we need the number of cells, which is kind of reverse.
+        var max_cells = Math.max.apply(null, BuildTemplate.available_col_nrs);
+        var min_cells = Math.min.apply(null, BuildTemplate.available_col_nrs);
+        var number_cols = max_cells - BuildTemplate.vm.col_nr() + min_cells;
+
+        start_polling_request(
+            "/webapp/glyphlist_to_template/",
+            {
+                glyphs: templates_module.glyphs().map(function (a) {
+                    return a.unit;
+                }), // unit object list to char list
+                format: BuildTemplate.vm.format(),
+                name: BuildTemplate.vm.name(),
+                col_nr: number_cols,
+                add_info: { counter: run_counter++, prefill: BuildTemplate.vm.prefill()},
+                helplines: BuildTemplate.vm.helplines(),
+                background_chars: BuildTemplate.vm.background_chars(),
+                marker_hint: pl.t("template_marker_hint")
+            },
+            BuildTemplate.job.finished,
+            BuildTemplate.job.error,
+            BuildTemplate.job.result,
+            BuildTemplate.save_new_glyphs_and_update
+        );
+    },
+
+
+    view_form: function () {
+        return [
+            m("#create-template-form.form", [
+                m("h3", pl.t("Download Template")),
+
+                build_text_field(pl.t("File name"), BuildTemplate.vm.name),
+                build_radio_list(
+                    pl.t("Template Format"),
+                    {"pdf": "PDF", "png": "PNG"},
+                    BuildTemplate.vm.format,
+                    {},
+                    {}),
+                build_slider(pl.t('Size of template cells'),
+                    BuildTemplate.vm.col_nr,
+                    Math.min.apply(null, BuildTemplate.available_col_nrs),
+                    Math.max.apply(null, BuildTemplate.available_col_nrs), 1,
+                    {show_value: false}),
+
+                build_checkbox(
+                    "crt-tmpl-hlplns",
+                    pl.t("Draw helplines"),
+                    BuildTemplate.vm.helplines,
+                    {},
+                    {tooltip: pl.t('helplines_tooltip')}),
+
+                build_checkbox(
+                    "crt-tmpl-backg-chars",
+                    pl.t("Characters as background"),
+                    BuildTemplate.vm.background_chars,
+                    {},
+                    {tooltip: pl.t('background_chars_tooltip')}),
+
+                window.gn_config.enable_debug_opt
+                    ? build_checkbox("crt-tmpl-debg-fillout", "Prefill (Testing only)", BuildTemplate.vm.prefill, {})
+                    : null,
+
+                // build_form_buttons(BuildTemplate.start_request, pl.t("Create"))
+                m(__mdl_helper.form_buttons,{
+                    action_func: BuildTemplate.start_request,
+                    action_label: pl.t("Download"),
+                    action_button_id: 'download-template-submit-button'
+                })
+
+
+            ])
+        ]
+    },
+
+    view_result: function () {
+        return m('div', [
+            m('.template-download-wrap', [
+                m('span', pl.t('Download your template:')+ ' '),
+                m("a[href='" + BuildTemplate.job.result().url + "'][target=_blank]#download-template-result-link", BuildTemplate.job.result().filename)
+            ]),
+            m('h5', pl.t('Please note:')),
+            m('p', m.trust(pl.t('After scanning proceed to')))
+            ])
+    },
+
+    view: function() {
+        return polling_view(
+            BuildTemplate.job.is_request_send,
+            BuildTemplate.view_form,
+            BuildTemplate.job.error,
+            BuildTemplate.job.result,
+            BuildTemplate.view_result
+        )
+    }
+};

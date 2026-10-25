@@ -1,0 +1,193 @@
+var modules = [];
+
+var Home = {
+
+    is_db_synchronized: m.prop(!window.fe_user.is_upgraded),    // don't synch at all for free users.
+
+    show_content_working_overlay: m.prop(false),
+
+    show_home_waiting_overlay: function() {
+        Home.show_content_working_overlay(true);
+        m.redraw(true);
+    },
+    hide_home_waiting_overlay: function() {
+        Home.show_content_working_overlay(false);
+        m.redraw(true);
+    },
+
+    controller: function () {
+        // m.redraw.strategy("diff");    // prevent flickering when closing overlay.
+        this.modal = submodule(Modal);
+
+        // Synchronize Clientside with Backend data
+        if (!Home.is_db_synchronized()) {
+
+            synch_fonts_list().then(function (r) {
+                Home.is_db_synchronized(true);
+                    if (r.new_fonts.length + r.updated.length + r.deleted.length > 0) {
+                        setTimeout(function () {    // hack, because the toast component isn't ready if page is loaded.
+                            show_toast(sprintf(pl.t("Loaded %s new font(s), %s updated font(s) and deleted %s fonts."), r.new_fonts.length, r.updated.length, r.deleted.length))
+                        }, 500);
+                    }
+                    m.redraw(true);     // without force safari hangs in the "synching spinner"
+
+                },
+                // problem: The following error handler will not be called for eg. 404ers
+                function (e) {
+                    console.error("Home.controller: error in synch_fonts_list. redirectiong to app_error.");
+                    if (typeof e !== 'undefined') {
+                        console.error(e);
+                    }
+                    sleepFor(2000);     // give some time to log error.
+                    window.location = window.gn_config.app_error_page_url;
+                });
+        }
+    },
+
+
+    active_module: function () {
+        var r = m.route() !== "/" ? modules[m.route.param("module")] : dashboard_module;   // todo: this errors sometimes, because the dashboard_module is loaded after this script. but putting app_home at the end will also not work because app_home currently initatetes the modules object.
+        return r;
+    },
+
+    active_item: function () {
+        return m.route.param("itemId")
+    },
+
+    componentArgs: function () {
+        return {
+            "itemId": this.active_item()
+        }
+    },
+
+    is_dashboard: function () {
+        return m.route() === "/"
+    },
+
+    view_app: function (ctrl) {
+
+        return [
+            m("#snackbar.mdl-js-snackbar.mdl-snackbar", [
+                m(".mdl-snackbar__text"),
+                m("button[type=button].mdl-snackbar__action")
+            ]),
+
+            m('div',    // this is a dummy container to avoid the multiple empty mdl-layout__container created by a click on the tab menu. Similar problem like https://github.com/Zodiase/meteor-mdl/issues/6
+                m(".mdl-layout.mdl-js-layout.mdl-layout--fixed-header" + (Home.is_dashboard() ? '' : '.mdl-layout--fixed-drawer'), [
+                    m("header.mdl-layout__header", [
+
+                        m(".mdl-layout__tab-bar", [
+                            Object.keys(modules).map(function (module_key) {
+                                var module = modules[module_key];
+                                if (['glyphs', ''].indexOf(module.urlPath) !== -1) {
+                                    return null;
+                                }
+                                var active = '/' + module.urlPath === m.route() ? '.is-active' : '';
+                                return m("a#top-module-link-" + module.urlPath + ".mdl-layout__tab" + active + "[href='/" + module.urlPath + "']",
+                                    {config: m.route},
+                                    module.label)
+                            }),
+                        ]),
+
+                        m('#calli-header-right', [
+                            m('#header-account-info', [
+                                m("a.calli-header-right-item[href='" + window.fe_urls.profile_url + "']",
+                                    [
+                                        window.fe_user.show_expire_warning
+                                            ? m('i.material-icons#account-expire-warning-icon',
+                                                {
+                                                    title: window.fe_user.account_expire_str
+                                                },
+                                                'warning')
+                                            : null,
+                                        ' ' + window.fe_user.username]),
+                                //m("a.calli-header-right-item[href='" + window.fe_user.logout_url + "']", pl.t("Log out")),
+                                m('form.header-logout-form[method=post][action=' + window.fe_user.logout_url + ']', m.trust(c_token), m('button[type=submit].calli-header-right-item.header-logout-link', pl.t('Log out')))    ,
+                            ])
+
+                        ]),
+
+                        // Toolbar not on dashboard
+                        Home.is_dashboard()
+                            ? null
+                            : m.component(Home.active_module().toolbar, Home.componentArgs()),
+                    ]),
+
+                    Home.is_dashboard()
+                        ? null
+                        : m(".mdl-layout__drawer#drawer-" + Home.active_module().urlPath, [
+                            m("a#header-logo.mdl-layout-title[href=" + calli_base_url + "]",
+                                m('img#logo', {src: window.static_path + 'img/logo.svg'})),
+                            m("nav.mdl-navigation", [
+                                m.component(Home.active_module().sidedrawer, Home.componentArgs()),
+                            ])
+                        ]),
+
+                    m("main.mdl-layout__content", [
+                        m(".page-content#page-content-" + Home.active_module().urlPath, [
+                            m.component(Home.active_module().content, Home.componentArgs()),
+                            Home.show_content_working_overlay()
+                                ? m('#content-wait-overlay',
+                                    m('#content-wait-overlay-spinner.mdl-spinner.mdl-js-spinner.mdl-spinner--single-color.is-active', ' ') )
+                                : null,
+                        ]),
+
+                        [m("footer.mdl-mini-footer", [
+                            // m('.mdl-layout-spacer'),
+                            m(".mdl-mini-footer__left-section", [
+                                m(".mdl-logo", []),
+                                m("ul.footer-nav.mdl-mini-footer__link-list", [
+                                    m("li", [m("a[href=" + window.fe_urls.contact_url + "]", pl.t("Contact"))]),
+                                    m("li", [m("a[href=" + window.fe_urls.faq_url + "]", "FAQ")]),
+                                    m("li", [m("a[href=" + window.fe_urls.tutorial_url + "]", pl.t("Tutorial"))]),
+                                    m("li", window.fe_user.is_upgraded
+                                        ? [m('a[href=' + window.fe_urls.upgrade_url + ']', pl.t('Extend your account upgrade'))]
+                                        : [m('a[href=' + window.fe_urls.upgrade_url + ']', pl.t('Upgrade your account'))])
+                                ])
+                            ]),
+
+
+                                 m(".mdl-mini-footer__middle-section", [
+                                     m("ul.mdl-mini-footer__link-list", [    // ul/li is used only because that centers it vertically.
+                                         m("li", m('form[method=post][action='+lang_switch_url+']', [
+                                                 m.trust(c_token),
+                                                 Object.keys(available_languages).map( function(lang_key) {
+                                                     return m('button[name=language][value='+lang_key+'].lang-nav-buttons', available_languages[lang_key])
+                                                 })
+                                             ])
+                                         )
+                                     ])
+                                ]),
+
+
+                            m(".mdl-mini-footer__right-section", [
+                                m("ul.mdl-mini-footer__link-list", [    // ul/li is used only because that centers it vertically.
+                                    m("li", Home.active_module().footer_right
+                                        ? [ m.component(Home.active_module().footer_right) ]
+                                        : []),
+                                ])
+                            ])
+
+
+                        ])]
+
+                    ]),
+                ])
+            ),
+
+            ctrl.modal({class: "modal-animation-1"}),       // 8,9    1, 7, 13
+
+
+        ]
+    },
+
+    view: function (ctrl) {
+        if (!Home.is_db_synchronized()) {
+            return build_centered_spinner(pl.t("Synchronizing with database ..."));
+        }
+        else {
+            return Home.view_app(ctrl)
+        }
+    }
+};
+

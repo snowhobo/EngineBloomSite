@@ -1,0 +1,127 @@
+var fonts_module = {
+    urlPath: "fonts",
+    label: pl.t("My Fonts"),
+    // icon_key: "translate",
+
+    // components
+    sidedrawer: fonts_sidedrawer,
+    content: fonts_content,
+    toolbar: fonts_toolbar,
+    footer_right: fonts_footer_right,
+
+    // model stuff
+    fonts: m.prop(),
+    current_font_id: m.prop(),
+    current_font: function () {
+
+        if (!fonts_module.fonts() || fonts_module.fonts().length === 0) {
+            return undefined;
+        }
+        return get_obj_by_prop_value(fonts_module.fonts(), 'id', fonts_module.current_font_id() );
+
+    },
+    units: m.prop(),    // list of all characters and ligatures. 'glyphs' would be a better name ...
+
+    newItemForm: SetAdvanceForm,  // ???: brauchts das hier?
+
+
+    switch_active_font: function (font) {
+        this.current_font_id(font.id);
+        return this.update_current_glyphs();
+    },
+
+    delete_current_font: function () {
+
+        function func() {
+            var font_delete_id = fonts_module.current_font().id;
+            Fonts.delete(font_delete_id).then(function () {
+                    fonts_module.units([]);
+                    fonts_module.current_font_id(undefined);
+                    fonts_sidedrawer.updateFontsList().then(function () {
+                        m.route('/'+fonts_module.urlPath);
+                    });
+
+                    show_toast(pl.t('Font was successfully deleted.'))
+                }
+            );
+        }
+
+        show_are_your_sure_dialog({
+            text: pl.t("Do you want to delete this font?"),
+            button_label: pl.t("Delete"),
+            //    dontaskagain_key: 'delete_font',
+            action_function: func
+        });
+
+        // Modal.module(AreYouSureDialog, {
+        //     text: "Do you want to delete this font?",
+        //     button_label: "Delete",
+        //     //    dontaskagain_key: 'delete_font',
+        //     action_function: func
+        // });
+    },
+
+    copy_current_font: function() {
+        Fonts.copyFont(fonts_module.current_font()).then(function(newFontId) {
+            fonts_sidedrawer.updateFontsList().then(m.redraw);
+            show_toast(pl.t('Font was successfully copied.'))
+
+        });
+    },
+
+    delete_glyph: function (glyph) {
+        Home.show_home_waiting_overlay();
+        return Glyphs.delete(glyph).then(function () {
+            var cur_units = fonts_module.units();
+            cur_units = remove_obj_by_prop_value(cur_units, 'unit', glyph.unit);
+            fonts_module.units(cur_units);
+
+            return fonts_module.update_current_glyphs().then(function() {
+                Home.hide_home_waiting_overlay()
+            });
+        });
+    },
+
+
+
+    /**
+     * Update the current glyph list wth the glyphs of the current font.
+     * If the user is logged we also synch the client db with the server db.
+     */
+    update_current_glyphs: function () {
+        // todo2: error handlig when synchin nicht funktioniert.
+
+        if (!fonts_module.current_font()) {
+            window.jsLogger && window.jsLogger.warn('update_current_glyphs(): undefined fonts_module.current_font().')
+            return;
+        }
+
+        var update_ui = function () {
+            return fonts_module.current_font().getGlyphWithVariants().then(function (glyphs) {
+                fonts_module.units(glyphs);
+                m.redraw();
+                return glyphs;
+            })
+        };
+
+        // if it is a upgrade user look on backend for updates
+        if (window.fe_user.is_upgraded ) {
+            return synch_font(fonts_module.current_font_id(), function (r) {
+                window.jsLogger && window.jsLogger.debug('update_current_glyphs() synch_font result', r);
+                var number_changes = r.glyphs.new.length + r.glyphs.updated.length + r.glyphs.deleted.length + r.variants.new.length + r.variants.updated.length + r.variants.deleted.length;
+                    if (number_changes > 0) {
+                        show_toast(sprintf(pl.t("%s items have been synchronized with the server."), number_changes));
+                    }
+                    return update_ui();
+                }
+            )
+        }
+        else {
+            return update_ui();
+        }
+
+    }
+};
+
+
+modules[fonts_module.urlPath] = fonts_module;

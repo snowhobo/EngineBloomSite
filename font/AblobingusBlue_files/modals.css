@@ -1,0 +1,237 @@
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    min-width: 100px;
+    height: auto;
+    z-index: 10;
+    visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -moz-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-transform: translateX(-50%) translateY(-50%);
+    -moz-transform: translateX(-50%) translateY(-50%);
+    -ms-transform: translateX(-50%) translateY(-50%);
+    transform: translateX(-50%) translateY(-50%);
+    max-height: 90%;
+    overflow-x: hidden;      /* required for the hints with the green background*/
+
+}
+
+.dialog-hint {
+    background-color: rgba(100,255,218,0.4);
+    margin-left: -2em;
+    padding: 1em 2em 1em 2em;
+    width: 110%;
+    margin-top: 1em;
+}
+
+.modal-dialog {
+    position: relative;
+    overflow-y: auto;       /* enable scrollbar. Else on small screens the save button might become unreachable. */
+    overflow-x: hidden;      /* required for the hints with the green background*/
+}
+
+.modal-visible {
+    visibility: visible;
+}
+
+.modal-overlay {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+    top: 0;
+    left: 0;
+    z-index: 9;
+    opacity: 0;
+    background-color: silver;
+}
+
+.modal-close {
+    color: inherit;
+    font-size: 1.6em;
+    font-weight: bold;
+    right: 10px;
+    position: absolute;
+    text-decoration: none;
+    top: 5px;
+}
+
+.modal-visible ~ .modal-overlay {
+    opacity: 0.6;
+    visibility: visible;
+}
+
+
+.modal-dialog {background:white;min-height:100px;padding:2em; }
+
+
+
+
+.modal-overlay {
+    -webkit-transition: all 0.3s;
+    -moz-transition: all 0.3s;
+    transition: all 0.3s;
+}
+
+/* Processing Spinner */
+.modal-dialog .waiting-spinner-wrap { min-width: 240px; text-align: center; margin: 40px 0;}
+.modal-dialog .waiting-header { text-align: center}
+.modal-dialog .mdl-spinner { width: 50px; height: 50px; }   /* make the mdl spinner a bit larger */
+
+
+/* ---------   Effects -------------- */
+/* Effect 1: Fade in and scale up */
+.modal-animation-1 .modal-dialog {
+    -webkit-transform: scale(0.7);
+    -moz-transform: scale(0.7);
+    -ms-transform: scale(0.7);
+    transform: scale(0.7);
+    opacity: 0;
+    -webkit-transition: all 0.3s;
+    -moz-transition: all 0.3s;
+    transition: all 0.3s;
+}
+
+.modal-visible.modal-animation-1 .modal-dialog {
+    -webkit-transform: scale(1);
+    -moz-transform: scale(1);
+    -ms-transform: scale(1);
+    transform: scale(1);
+    opacity: 1;
+}
+
+
+/* Effect 7:  slide and stick to top */
+.modal-animation-7{
+    top: 0;
+    -webkit-transform: translateX(-50%);
+    -moz-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+}
+
+.modal-animation-7 .modal-dialog {
+    -webkit-transform: translateY(-200%);
+    -moz-transform: translateY(-200%);
+    -ms-transform: translateY(-200%);
+    transform: translateY(-200%);
+    -webkit-transition: all .3s;
+    -moz-transition: all .3s;
+    transition: all .3s;
+    opacity: 0;
+}
+
+.modal-visible.modal-animation-7 .modal-dialog {
+    -webkit-transform: translateY(0%);
+    -moz-transform: translateY(0%);
+    -ms-transform: translateY(0%);
+    transform: translateY(0%);
+    border-radius: 0 0 3px 3px;
+    opacity: 1;
+}
+
+/* Effect 8: 3D flip horizontal */
+.modal-animation-8 {
+    -webkit-perspective: 1300px;
+    -moz-perspective: 1300px;
+    perspective: 1300px;
+}
+
+.modal-animation-8 .modal-dialog {
+    -webkit-transform-style: preserve-3d;
+    -moz-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+    -webkit-transform: rotateY(-70deg);
+    -moz-transform: rotateY(-70deg);
+    -ms-transform: rotateY(-70deg);
+    transform: rotateY(-70deg);
+    -webkit-transition: all 0.3s;
+    -moz-transition: all 0.3s;
+    transition: all 0.3s;
+    opacity: 0;
+}
+
+.modal-visible.modal-animation-8 .modal-dialog {
+    -webkit-transform: rotateY(0deg);
+    -moz-transform: rotateY(0deg);
+    -ms-transform: rotateY(0deg);
+    transform: rotateY(0deg);
+    opacity: 1;
+}
+
+/* Effect 9: 3D flip vertical */
+.modal-animation-9 {
+    -webkit-perspective: 1300px;
+    -moz-perspective: 1300px;
+    perspective: 1300px;
+}
+
+.modal-animation-9 .modal-dialog {
+    -webkit-transform-style: preserve-3d;
+    -moz-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+    -webkit-transform: rotateX(-70deg);
+    -moz-transform: rotateX(-70deg);
+    -ms-transform: rotateX(-70deg);
+    transform: rotateX(-70deg);
+    -webkit-transition: all 0.3s;
+    -moz-transition: all 0.3s;
+    transition: all 0.3s;
+    opacity: 0;
+}
+
+.modal-visible.modal-animation-9 .modal-dialog {
+    -webkit-transform: rotateX(0deg);
+    -moz-transform: rotateX(0deg);
+    -ms-transform: rotateX(0deg);
+    transform: rotateX(0deg);
+    opacity: 1;
+}
+
+
+/* Effect 13: 3D slit */
+.modal-animation-13 {
+    -webkit-perspective: 1300px;
+    -moz-perspective: 1300px;
+    perspective: 1300px;
+}
+
+.modal-animation-13 .modal-dialog {
+    -webkit-transform-style: preserve-3d;
+    -moz-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+    -webkit-transform: translateZ(-3000px) rotateY(90deg);
+    -moz-transform: translateZ(-3000px) rotateY(90deg);
+    -ms-transform: translateZ(-3000px) rotateY(90deg);
+    transform: translateZ(-3000px) rotateY(90deg);
+    opacity: 0;
+}
+
+.modal-visible.modal-animation-13 .modal-dialog {
+    -webkit-animation: slit .7s forwards ease-out;
+    -moz-animation: slit .7s forwards ease-out;
+    animation: slit .7s forwards ease-out;
+}
+
+@-webkit-keyframes slit {
+    50% { -webkit-transform: translateZ(-250px) rotateY(89deg); opacity: .5; -webkit-animation-timing-function: ease-out;}
+    100% { -webkit-transform: translateZ(0) rotateY(0deg); opacity: 1; }
+}
+
+@-moz-keyframes slit {
+    50% { -moz-transform: translateZ(-250px) rotateY(89deg); opacity: .5; -moz-animation-timing-function: ease-out;}
+    100% { -moz-transform: translateZ(0) rotateY(0deg); opacity: 1; }
+}
+
+@keyframes slit {
+    50% { transform: translateZ(-250px) rotateY(89deg); opacity: 1; animation-timing-function: ease-in;}
+    100% { transform: translateZ(0) rotateY(0deg); opacity: 1; }
+}
+
+
+
+
+
+.modal .additional-option { margin-top: 1em;}

@@ -1,0 +1,131 @@
+/* global __pixit:true */
+
+/**
+ * Virtual DOM element returned by mithril's m() function
+ *
+ * @typedef {object} VirtualDomEl
+ */
+
+/**
+ * Coordinates of a given canvas point
+ *
+ * @typedef {object} CanvasCoords
+ * @property {number} x
+ * @property {number} y
+ */
+
+/**
+ * Object that stores drawing actions with the ImageData before the changes and the affected
+ * coordinates
+ *
+ * @typedef {object} CanvasState
+ * @property {ImageData} data
+ * @property {CanvasCoords} coords
+ */
+
+/**
+ * Array containing all the steps taken to perform a certain draw operation on the canvas
+ *
+ * @typedef {CanvasState[]} CanvasOperation
+ */
+
+__pixit = {
+    shapes: {
+        SQUARE: {
+            val: 'square',
+            icon: 'stop'
+        },
+        CIRCLE: {
+            val: 'circle',
+            icon: 'brightness_1'
+        },
+        VERTICAL_LINE: {
+            val: 'vertical line',
+            icon: '│'
+        },
+        HORIZONTAL_LINE: {
+            val: 'horizontal line',
+            icon: '─'
+        },
+        SLASH: {
+            val: 'slash (/)',
+            icon: '╱'
+        },
+        BACKSLASH: {
+            val: 'backslash (\\)',
+            icon: '╲'
+        },
+        ERASER: {
+            val: 'eraser',
+            icon: 'delete'
+        }
+    },
+
+    /**
+     * Store additional safety pixels for the "undo" action because slashes where leaving some black
+     * area on their corners
+     *
+     * @type {number}
+     */
+    SAFETY_PIXELS: 5,
+
+    /**
+     * Maximum zoom level on the drawing canvas
+     *
+     * @type {number}
+     */
+    MAX_ZOOM: 8,
+
+    MIN_ZOOM: 1,
+
+    /**
+     * Maximum size in pixels of the drawing canvas tool
+     *
+     * @type {number}
+     */
+    MAX_PENCIL_SIZE: 20,
+
+    /**
+     * Maximum number of stored changes
+     *
+     * @type {number}
+     */
+    MAX_STACK_SIZE: 50,
+
+    /**
+     * Keycode for the ESC key
+     *
+     * @type {number}
+     */
+    ESC_KEY: 27,
+
+    /**
+     * RGB color channels for the cursor shade canvas
+     *
+     * @type {number[]}
+     */
+    SHADE_RGB: [29, 233, 182],
+
+    /**
+     * Alpha channel for the cursor shade canvas
+     *
+     * @type {number}
+     */
+    SHADE_OPACITY: 0.7,
+
+    /**
+     * Border on the canvas container and the preview canvas
+     *
+     * @type {number}
+     */
+    CONTAINER_BORDERS: 4
+
+
+};
+
+/**
+ * Color for the cursor shade canvas
+ *
+ * @type {string}
+ */
+__pixit.SHADE_COLOR = 'rgba(' + __pixit.SHADE_RGB.join(',') + ',' + __pixit.SHADE_OPACITY + ')';

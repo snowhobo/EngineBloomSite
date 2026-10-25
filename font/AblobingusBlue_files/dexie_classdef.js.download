@@ -1,0 +1,185 @@
+//
+// Declare Database
+// Deleting the db via console: indexedDB.deleteDatabase('msfdb');
+
+// We do not use compound keys as Edge and IE10,11 don't support them currently.
+
+// This functions should not be called direct. Use the functions provided in mithril_model.js.
+
+// The 'version' field is used if items are saved in the backend. It is increaded with every save there.
+
+
+
+// var all = Dexie.Promise.all;
+// var dexieDbIsAvailable = false;
+
+var db = new Dexie(window.fe_user.clientdb_name, {autoOpen: false});
+
+db.version(1).stores({
+    fonts: "&id,&name,created_seconds",
+    glyphs: "&id,unit,fontId",
+    glyphVariants: "&id,glyphId",
+    currentTemplate: "id++,&unit"
+});
+
+function logBreadcrumb(message) {
+    if (window.jsLogger && typeof window.jsLogger.info === "function") {
+        window.jsLogger.info("Dexie: " + message);
+    } else {
+        console.log("[Dexie Log]:", message);
+    }
+}
+
+// Attach Dexie event listeners to log jsLogger breadcrumbs
+const dexieEvents = ["ready", "close", "populate"];
+dexieEvents.forEach(event => {
+    db.on(event, (...args) => {
+        logBreadcrumb(event);
+    });
+});
+
+
+db.open().catch(function(error) {
+    window.jsLogger && window.jsLogger.error('Error opening IndexedDB in app: ' + error);
+});
+
+
+
+// Font
+var Font = db.fonts.defineClass({
+    id: String,
+    name: String,
+    default_glyph_advance: Number,     // This one is ugly. it is a decimal. in the backend it will multiplicated with 100.
+    scale_factor: Number,
+    version: Number,
+    created_seconds: Number,
+    word_spacing: Number
+});
+
+Font.prototype.save = function () {
+    return db.fonts.put(this);
+};
+
+
+// Move to mithril_model ??
+Font.prototype.getGlyphWithVariants = function () {
+
+    return db.glyphs.where('fontId').equals(this.id).toArray().then(function (glyphs) {
+        return glyphs
+    }).then(function (gs) {
+        var glyphsIds = gs.map(function (a) {
+            return a.id;
+        });
+
+        return db.glyphVariants.where('glyphId').anyOf(glyphsIds).toArray().then(function (variants) {
+            return [gs, variants];
+        }).then(function (res) {
+            var glyphs = res[0];
+            var variants = res[1];
+
+            // create a map with ids as keys for fast access
+            var glyphsMap = {};
+            for (var i = 0; i < glyphs.length; i++) {
+                glyphsMap[glyphs[i].id] = glyphs[i];
+                glyphsMap[glyphs[i].id].variants = []
+            }
+
+            // add glpyhs to glyphs
+            for (var i = 0; i < variants.length; i++) {
+                glyphsMap[variants[i].glyphId].variants.push(variants[i])
+            }
+
+            var resultArray = [];
+            for (var key in glyphsMap) {
+                resultArray.push(glyphsMap[key])
+            }
+            return resultArray;
+        })
+
+    })
+
+};
+
+
+// =======================   ---- Glyphs  -----------   ====================================
+// A glyph can represent a Single Character or a Ligature.
+var Glyph = db.glyphs.defineClass({
+    id: Number,
+    unit: String,       // a single character for a glyph, or multiple for a unit.
+    fontId: String,
+    version: Number
+});
+
+
+Glyph.prototype.save = function () {
+    var me = this;
+    if (!this.id) {
+        return db.glyphs.where('fontId').equals(this.fontId).and(function(glyph) {
+            return glyph.unit == me.unit;
+        }).count(function(count){
+            if (count === 0) {
+                return db.glyphs.put(me);
+            }
+            else {
+                var msg = "Glyph with unit "+me.unit+" for font "+me.fontId+" already exists.";
+                window.jsLogger && window.jsLogger.debug(msg);
+                return Dexie.Promise.reject(new Dexie.ConstraintError(msg));
+            }
+        })
+    }
+};
+
+
+Glyph.prototype.variants = undefined;    // ??? required
+
+// ----- GlyphVariants -----------------
+var GlyphVariant = db.glyphVariants.defineClass({
+    id: Number,
+    image_base64: String,
+    glyphId: String,
+    isDefault: Boolean,
+    custom_advance: Number,
+    base_adjustment: Number,
+    scale_factor: Number,
+    version: Number,
+    left_bearing: Number,
+    right_bearing: Number,
+});
+
+GlyphVariant.prototype.save = function () {
+    // If this is the only variant for the glyph it will marked as Default glyph.
+    // ??? better make this as presave hook, to avoid this functionality is missing when glyphVariants.put or add is
+    // called directly.
+    var me = this;
+    return db.glyphVariants.where('glyphId').equals(this.glyphId).count(function(count) {
+        me.isDefault = count === 0;
+        return db.glyphVariants.put(me);
+    });
+
+
+};
+
+GlyphVariant.prototype.set_image_base64 = function (data) {
+    this.image_base64 = data;
+    this.save();
+};
+
+
+// // ==================== TEMPLATES =======================
+// var Template = db.templates.defineClass({
+//     id: Number,
+//     name: String,
+//     units: []
+// });
+
+
+
+// ==================== CURRENT_TEMPLATE =======================
+var CurrentTemplate = db.currentTemplate.defineClass({
+    id: Number,
+    units: String
+});
+
+
+
+

@@ -1,0 +1,28 @@
+/* global __pixit, m */
+
+__pixit.iconBtn = {
+  /**
+   * Show a button containing a material design icon, along with a tooltip
+   *
+   * @param {object} ctrl
+   * @param {{icon: string,
+   * class: string,
+   * click: function,
+   * title: string,
+   * for: string,
+   * disabled: boolean}} args
+   * @return {VirtualDomEl}
+   */
+  view: function view(ctrl, args) {
+    var id = 'btn_' + args.icon;
+
+    args.for = id;
+    args.isBtn = true;
+
+    return m(
+      'button.mdl-button.mdl-js-button',
+      { id: id, onclick: args.click, disabled: args.disabled },
+      m(__pixit.icon, args)
+    );
+  }
+};

@@ -2,9 +2,52 @@
     border-radius: 1746px;
 }
 .the-button {
-        background: red;
-        cursor: wait;
+        background: rgb(32, 116, 67);
+        cursor: help;
+        border: 0;
+        border-radius: 15px;
+        color:rgb(255, 251, 236);
     }
 .painting {
     
+}
+
+body {
+            background-image: url('images/backgroundshot.jpg');
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+.title {
+    align-self: center;
+}
+.enginecenter {
+    background-color: coral;
+    width: 300px;
+    height: 300px;
+    text-align: center;
+    display: inline-block;
+}
+.gscroll {
+    display: flexbox;
+    overflow: auto;
+    white-space: nowrap;
+    scrollbar-color: coral;
+}
+.gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    width: 4000px;
+    background-color: coral;
+}
+.A1 {
+background-color: aquamarine;
+text-align: center;
+}
+.A2 {
+background-color: cornflowerblue;
+text-align: center;
+}
+.A3 {
+background-color: rgb(219, 165, 29);
+text-align: center;
 }

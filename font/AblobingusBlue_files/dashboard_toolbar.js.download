@@ -1,0 +1,11 @@
+var dashboard_toolbar = {
+
+    // not used, there is no toolbar on the dashboard view
+    controller: function (args) {
+    },
+
+    view: function () {
+        return null;
+    }
+};
+

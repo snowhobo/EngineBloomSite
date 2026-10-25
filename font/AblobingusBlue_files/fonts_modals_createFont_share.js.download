@@ -1,0 +1,152 @@
+var ShareFont = {
+
+    sharing_targets: ['Twitter', 'Facebook', 'Pinterest', 'Tumblr', 'Reddit', 'Linkedin'],
+
+
+    vm: {
+        /*
+         'tempdir_relpath': temp_dir_relpath,
+         'fontBaseName': fontname_base,
+         'cssFileName': css_file_name,
+         'text_examples': text_examples,
+         'font_files': font_files
+
+         font_files = [{
+         'file_name': os.path.basename(ttf_font_file),
+         'rel_url': "%s/%s" % (temp_dir_relpath, os.path.basename(ttf_font_file)),
+         'file_size_str': file_size_for_humans(os.path.getsize(ttf_font_file))
+         }]
+
+         */
+        show_min_length_note: m.prop(false),
+        result: m.prop(),
+        // text: m.prop('My latest font created with Calligraphr.\nThe quick brown fox jumps over the lazy dog.'),
+        text: m.prop(''),
+
+        // caching for created share pages, so that we can reuse a page if user shares his font on multiple social networks.
+        share_url: m.prop(),
+        share_image_url: m.prop(),
+
+        error_message: m.prop()
+    },
+
+    share: function (target) {
+
+        if (ShareFont.vm.text().length < 10 ) {
+            ShareFont.vm.show_min_length_note(true);
+            return;
+        }
+        else {
+            ShareFont.vm.show_min_length_note(false);
+        }
+
+        // we have to open the new window, directly after the user has clicked, else chrome will block the new window
+        // as a opup
+        var new_window = window.open ('/wait', 'sharing_win', '');         // nth: fix hardcoded url.
+
+        if (!ShareFont.vm.share_url()) {
+            fetch_post('/sharing/create_font_page/',      // todo3: avoid hardcoding
+                {
+                    tempdir_relpath: ShareFont.vm.result().tempdir_relpath,
+                    fontBaseName: ShareFont.vm.result().fontBaseName,
+                    text: ShareFont.vm.text()
+                })
+                .then(function (r) {
+                    if (r.success) {
+                        // remember result if user shares again on another network
+                        ShareFont.vm.share_url(r.url);
+                        ShareFont.vm.share_image_url(r.image_url);
+                        redirect_to_share_host(
+                            target,
+                            ShareFont.vm.share_url(),
+                            ShareFont.vm.share_image_url(),
+                            new_window
+                        );
+                    }
+                    else {
+                        new_window.close();
+                        ShareFont.vm.error_message(r.error_message);
+                    }
+                })
+        }
+        else {
+            // nth: a way to prevent a user sharing the same on the same network again.
+            redirect_to_share_host(target, ShareFont.vm.share_url(), ShareFont.vm.share_image_url(), new_window);
+        }
+    },
+
+
+    controller: function (args) {
+        // clear state
+        ShareFont.vm.text('');
+        ShareFont.vm.share_url(null);
+        ShareFont.vm.share_image_url(null);
+        ShareFont.vm.error_message(null);
+
+        // save results from font building process. required to create the font example image.
+        ShareFont.vm.result(args)
+    },
+
+    view: function (ctrl) {
+        if (ShareFont.vm.error_message()) {
+            return m('div', [ m('div', pl.t(ShareFont.vm.error_message())),
+                m('.dialog-buttons', [ m("button[type=button]#share-close-button.mdl-button.mdl-js-button",
+                        { onclick: BuildFont.vm.result_show_share_dialog.bind(null, false) },
+                        pl.t('Close')
+                    )
+                ])
+            ])
+        }
+
+        return m('#share-font-dialog', [
+            m("link[href='" + BuildFont.vm.result().tempdir_relpath + "/" + BuildFont.vm.result().cssFileName + "'][rel=stylesheet]"),
+            m('h4', pl.t('Share a font preview')),
+            m('p', pl.t('We_share_only_generated_image')),
+            m('label', {for: "share-textarea", style: {display: 'block'}}, pl.t('Enter_text_shared_image')),
+
+            ShareFont.vm.show_min_length_note()
+                ? m('.error', pl.t('Please enter more words.' ) )
+                : null,
+
+            m('textarea#share-textarea.font-preview',
+                {
+                    type: "text", rows: "4", maxlength: '400',
+                    spellcheck: false,
+                    // placeholder: pl.t('Enter your text.'),
+                    onchange: m.withAttr('value', ShareFont.vm.text),
+                    oninput: function() {
+                        // User modified the text -> discard the cached results from last sharing.
+                        ShareFont.vm.share_url(null);
+                        ShareFont.vm.share_image_url(null);
+                    },
+                    config: function (element) {
+                            element.focus();
+                    }
+
+                },
+                ShareFont.vm.text()
+            ),
+
+            m('#share-start-buttons-wrap', [
+                m('span#share-start-buttons-label', pl.t('Share on') + ': '),
+                ShareFont.sharing_targets.map(function (target) {
+                    return m("button[type=button].sharing-button-network.mdl-button.mdl-js-button.mdl-button--raised.mdl-button--colored",
+                        {
+                            onclick: ShareFont.share.bind(null, target.toLowerCase())
+                        },
+                        m.trust(sharing_icons_svg[target.toLowerCase()])
+                    )
+                })
+            ]),
+
+            m('.dialog-buttons', [
+                m("button[type=button]#share-close-button.mdl-button.mdl-js-button",
+                    {
+                        onclick: BuildFont.vm.result_show_share_dialog.bind(null, false)
+                    },
+                    pl.t('Close')
+                )
+            ])
+        ])
+    }
+};

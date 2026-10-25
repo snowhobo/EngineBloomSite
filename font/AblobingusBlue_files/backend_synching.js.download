@@ -1,0 +1,176 @@
+/**
+ * Synchronize the Fonts on the Client side with the one in the Backend.
+ * The BE side is assumed to be the authoritive one.
+ *
+ * All fonts which are not in the backend will be deleted from the frontend.
+ * This will be causing if somebody starts as a free user on device A, the upgrades his account on device B
+ * and then opens the app on device A again. The olds fonts on device A will then be deleted.
+ *
+ * Only the Fonts are updated, not the contained glyphs or variant, because those will get loaded from the backend
+ * if a font is selected.
+ */
+function synch_fonts_list() {
+
+    var url = window.be_config.be_store_base_url + 'fonts' + '/';
+    return fetch_get(url).then(function (be_fonts) {
+            return Fonts.list().then(function (cs_fonts) {
+                var changes = {new_fonts: [], updated: [], deleted: []};
+
+                var p = Promise.resolve();
+
+                // delete files from the IndexedDB if they not exist on the server.
+                function check_if_exists_in_be(cs_font) {
+                    var be_font = get_obj_by_prop_value(be_fonts, 'id', cs_font.id);
+
+                    if (!be_font) {
+                        console.log(sprintf('synch_fonts_list: Exists not in backend: %j',
+                            cs_font));
+                        changes.deleted.push(be_font);
+                        return Fonts.delete_on_client(cs_font.id);
+                    }
+                }
+
+                for (var i = 0; i < cs_fonts.length; i++) {
+                    p = p.then(check_if_exists_in_be.bind(null, cs_fonts[i]));
+                }
+
+                // load fonts from the backend
+                function check_font_from_be(be_font) {
+                    var cs_font = get_obj_by_prop_value(cs_fonts, 'id', be_font.id);
+                    if (!cs_font) {
+                        window.jsLogger && window.jsLogger.debug('synch_fonts_list: New item from backendside.');
+                        changes.new_fonts.push(be_font);
+                        return Fonts.save_to_client(be_font)
+                    }
+                    else if (cs_font.version < be_font.version) {
+                        // This could happen if a user would have edited fonts in another browser in the meantime.
+                        window.jsLogger && window.jsLogger.debug('synch_fonts_list: Newer version on backendside > clientside', {
+                            client_version: cs_font.version,
+                            be_version: be_font.version
+                        });
+                        changes.updated.push(be_font);
+                        return Fonts.save(be_font);
+                    }
+                    else if (cs_font.version > be_font.version) {
+                        // This should never happen. What should we do?
+                        window.jsLogger && window.jsLogger.error('synch_fonts_list: Version mismatch: clientside > backendside. Should never happen.', {
+                            client_version: cs_font.version,
+                            be_version: be_font.version
+                        });
+                    }
+                    else {
+
+                        if (!compareObjectsOneLevel(cs_font, be_font)) {
+                            // Same version but different content. This could happen for eg. if a new property is added.
+                            window.jsLogger && window.jsLogger.info('synch_fonts_list: Identical Version but fonts not equal.');
+                            return Fonts.save_to_client(be_font);
+                        }
+
+
+                    }
+                }
+
+                for (var i = 0; i < be_fonts.length; i++) {
+                    p = p.then(check_font_from_be.bind(null, be_fonts[i]));
+                }
+
+                p = p.then(function () {
+                        return changes;
+                    }
+                );
+                return p
+            });
+        }
+    )
+}
+
+/**
+ * Synchronize the Glyphs and their Variants form the Client Db with the one from the DB by their version.
+ * @param font_id
+ * @param callback
+ */
+function synch_font(font_id, callback) {
+    // Create a dict id->version for glyphs
+    return Glyphs.listByFontId(font_id).then(function (glyphs) {
+        var glyphs_id_version = {};
+        for (var i = 0; i < glyphs.length; i++) {
+            var g = glyphs[i];
+            glyphs_id_version[g.id] = g.version;
+        }
+        return glyphs_id_version;
+    }).then(function (glyphs_id_version) {
+            // Create a dict id->version for variants
+            var variants_id_version = {};
+            return Variants.listByGlyphIdList(Object.keys(glyphs_id_version)).then(function (variants) {
+                for (var i = 0; i < variants.length; i++) {
+                    var v = variants[i];
+                    variants_id_version[v.id] = v.version;
+                }
+                return [glyphs_id_version, variants_id_version]
+            })
+        }
+    ).then(function (ids_versions_arrays) {
+            // Send those dicts to the server
+            var glyphs_id_version = ids_versions_arrays[0];
+            var variants_id_version = ids_versions_arrays[1];
+            var data = {fontId: font_id, glyphs: glyphs_id_version, variants: variants_id_version};
+
+            var url = window.be_config.be_store_base_url + 'font/diff/';
+
+            // todo2: remove this breadcrumb if bulkAdd errors are fixed
+            try {
+                window.jsLogger && window.jsLogger.debug("synch_font()", {
+                    glyph_len: glyphs_id_version.length,
+                    variants_len: variants_id_version.length,
+                    data: data
+                });
+            }
+            catch (e) {
+                console.error("error breadcumbing in synch_font()", e)
+            }
+
+            return fetch_post(url, data).then(
+                function (r) {
+                    return update_clientdb_from_server_response(r).then(function (r) {
+                        return callback(r);
+                    });
+                }
+            );
+        }
+    )
+}
+
+
+function update_clientdb_from_server_response(r) {
+    // Use the server respnse to upate the client side.
+    return db.transaction("rw", db.fonts, db.glyphs, db.glyphVariants, function () {
+        var destination = {'glyphs': db.glyphs, 'variants': db.glyphVariants};  //server-response-keys -> dexie object
+        for (var i = 0; i < Object.keys(destination).length; i++) {
+            var key = Object.keys(destination)[i];
+            var batch = r[key];
+            if (batch['new'].length) {
+
+                // todo2: remove this breadcrumb if bulkAdd errors are fixed
+                try {
+                    window.jsLogger && window.jsLogger.debug("update_clientdb_from_server_response()", {
+                        length: batch['new'].length,
+                        first_entry: batch['new'][0]
+                    });
+                }
+                catch (e) {
+                    console.error("error breadcumbing in update_clientdb_from_server_response()", e)
+                }
+
+                destination[key].bulkAdd(batch['new'])
+            }
+            if (batch['updated'].length) {
+                destination[key].bulkPut(batch['updated']);
+            }
+            if (batch['deleted'].length) {
+                destination[key].bulkDelete(batch['deleted'])
+            }
+        }
+        return r;
+    })
+}
+

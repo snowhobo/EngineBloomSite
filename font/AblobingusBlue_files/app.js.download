@@ -1,0 +1,320 @@
+/* global __pixit, m */
+
+/**
+ * @typedef {object} AppArgs
+ * @property {HTMLDivElement} rootEl
+ * @property {function} saveCb
+ * @property {number} width
+ * @property {number} height
+ * @property {number} maxWidth
+ * @property {string} src
+ */
+var init_again_previewCanvas = true;
+var init_again_drawingCanvas = true;
+
+__pixit.app = (function app() {
+    var model = __pixit.appModel;
+    var vm = __pixit.appVm;
+
+    /**
+     * Reset all elements and remove the event listeners
+     */
+    function onunload() {
+        model.reset();
+        vm.reset();
+    }
+
+    /**
+     * @param {AppArgs} args
+     */
+    function controller(args) {
+        vm.zoomVal(__pixit.MIN_ZOOM);
+        init_again_previewCanvas = true;
+        init_again_drawingCanvas = true;
+
+        vm.drawingCanvasWidth(args.width);
+
+        // vm.zoomVal = m.prop(__pixit.MIN_ZOOM);
+        // vm.pencilSizeVal = m.prop(10);
+        // vm.shapeVal = m.prop(__pixit.shapes.SQUARE.val);
+        // vm.isErasing = m.prop(false);
+        vm.stateStack([]);
+        // vm.prevMouseCoords(null);
+
+        m.redraw();
+        setTimeout(m.redraw, 300);
+    }
+
+    /**
+     * Generate a brush or eraser icon
+     *
+     * @param {{val: string, icon: string}} shape
+     * @param {function} click
+     * @param {boolean} isSelected
+     * @return {VirtualDomEl}
+     */
+    function brushIcon(shape, click, isSelected) {
+        return m(__pixit.icon, {
+            icon: shape.icon,
+            for: shape.icon,
+            class: 'brush',
+            click: click,
+            title: shape.val,
+            isSelected: isSelected
+        });
+    }
+
+    /**
+     * Unmount the whole app component
+     *
+     * @param {HTMLDivElement} rootEl
+     */
+    function cancel(rootEl) {
+        // m.mount(rootEl, null);
+        model.reset();
+        vm.reset();
+        Modal.module(null);
+        m.redraw();
+
+    }
+
+    /**
+     * Call the provided save callback with the edited image as a data string. After that, unmount the
+     * whole app component
+     *
+     * @param {function} saveCb
+     * @param {HTMLDivElement} rootEl
+     */
+    function save(saveCb, rootEl) {
+        saveCb(model.canvasCopy().toDataURL());
+        cancel();
+        Modal.module(null);
+        m.redraw()
+    }
+
+    /**
+     * Expand the canvas a 10%
+     *
+     * @param {boolean} rightOrLeft - true to expand the canvas on the right side, false otherwise
+     */
+    function expandCanvas(rightOrLeft) {
+        vm.drawingCanvasWidth(vm.drawingCanvasWidth() * 1.1);       // <-- might result in floats
+
+        var canvasCopy = model.canvasCopy();
+        var ctx = canvasCopy.getContext('2d');
+
+        // very slow, but better than toDataUrl + drawImage
+        var data = ctx.getImageData(0, 0, canvasCopy.width, canvasCopy.height);
+
+        var x = rightOrLeft ? 0 : 0.1 * canvasCopy.width;
+
+        canvasCopy.width *= 1.1;        //  <-- will result in floats
+
+        ctx.putImageData(data, x, 0);
+
+        vm.showSpinner(false);
+
+        m.redraw();
+
+        // scroll to the center of the canvasContainer after the spinner is hidden
+        var el = model.canvasContainer();
+
+        el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+        el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+    }
+
+    /**
+     * Show the spinner and expand the canvas after a delay bigger than 1/60 s, because the
+     * get/putImageData calls are very memory intensive and block any UI updates while being executed
+     *
+     * @param {boolean} rightOrLeft - true to expand the canvas on the right side, false otherwise
+     * @param {boolean} isDisabled
+     */
+    function triggerExpandCanvas(rightOrLeft, isDisabled) {
+        m.redraw.strategy('none');
+
+        // chrome was allowing the click even with the buttons disabled, so make sure it doesn't happen
+        if (isDisabled) {
+            return;
+        }
+
+        vm.showSpinner(true);
+
+        m.redraw(true);
+
+        setTimeout(expandCanvas.bind(null, rightOrLeft), 100);
+    }
+
+    /**
+     * @param {object} ctrl
+     * @param {AppArgs} args
+     * @return {VirtualDomEl}
+     */
+    function view(ctrl, args) {
+        var disableExpand = vm.drawingCanvasWidth() > args.maxWidth;
+
+        var rightBtnsAttrs = {
+            style: {
+                // width: (vm.drawingCanvasWidth() + __pixit.CONTAINER_BORDERS) + 'px',
+                // 'max-width': args.maxWidth + 'px'
+            }
+        };
+        return m('#pixit-wrap', [
+
+            m('table', m('tr', [
+                m('td.leftCol', [
+                    m(__pixit.previewCanvas, {
+                        width: vm.drawingCanvasWidth(), /// 2,
+                        height: args.height, //, / 2,
+                        el: model.previewCanvas,
+                        canvasCopy: model.canvasCopy
+                    }),
+
+                    m('.icons', [
+                        m('p.brushTitle', pl.t('Brushes')),
+                        m('#brushes-wrap', [
+                            Object.keys(__pixit.shapes).map(function mapCb(key) {
+                                if (key === 'ERASER') {
+                                    return null;
+                                }
+
+                                var shape = __pixit.shapes[key];
+
+                                return brushIcon(shape, function click() {
+                                    vm.shapeVal(shape.val);
+                                }, shape.val === vm.shapeVal());
+                            })
+                        ])
+                    ]),
+                    m(__pixit.slider, {
+                        id: 'pencilSizeSlider',
+                        label: pl.t('Brush size'),
+                        val: vm.pencilSizeVal,
+                        max: __pixit.MAX_PENCIL_SIZE,
+                        width: 120      //  vm.drawingCanvasWidth() / 2 + __pixit.CONTAINER_BORDERS
+                    }),
+                    m('.icons', [
+                        m('p.brushTitle', 'Eraser'),
+                        brushIcon(__pixit.shapes.ERASER, function click() {
+                            vm.isErasing(!vm.isErasing());
+                        }, vm.isErasing())
+                    ]),
+
+                ]),
+
+                m('td#js-rightCol.rightCol', [
+                    m(__pixit.drawingCanvas, {
+                        width: vm.drawingCanvasWidth(),
+                        height: args.height,
+                        maxWidth: args.maxWidth,
+                        canvasContainer: model.canvasContainer,
+                        el: model.drawingCanvas,
+                        showSpinner: vm.showSpinner,
+                        prevMouseCoords: vm.prevMouseCoords,
+                        draw: vm.draw,
+                        canvasCopy: model.canvasCopy,
+                        updatePreview: vm.updatePreview,
+                        showShade: vm.showShade,
+                        moveCursorShade: vm.moveCursorShade,
+                        zoom: vm.zoomVal,
+                        shape: vm.shapeVal,
+                        src: args.src
+                    }),
+                    m(__pixit.cursorShade, {
+                        el: model.cursorShade,
+                        show: vm.showShade,
+                        zoom: vm.zoomVal,
+                        maxZoom: __pixit.MAX_ZOOM,
+                        pencilSize: vm.pencilSizeVal,
+                        maxPencilSize: __pixit.MAX_PENCIL_SIZE,
+                        shape: vm.shapeVal
+                    }),
+                    // m('.buttons.cntr', rightBtnsAttrs, [
+                    //     m(__pixit.iconBtn, {
+                    //         icon: 'arrow_back',
+                    //         for: 'arrow_back',
+                    //         disabled: disableExpand,
+                    //         click: triggerExpandCanvas.bind(null, false, disableExpand),
+                    //         title: 'Expand to the left'
+                    //     }),
+                    //     m(__pixit.iconBtn, {
+                    //         icon: 'arrow_forward',
+                    //         for: 'arrow_forward',
+                    //         disabled: disableExpand,
+                    //         click: triggerExpandCanvas.bind(null, true, disableExpand),
+                    //         title: 'Expand to the right'
+                    //     })
+                    // ]),
+                    m(__pixit.slider, {
+                        id: 'zoomSlider',
+                        class: 'cntr',
+                        label: pl.t('Zoom level'),
+                        val: vm.zoomVal,
+                        min: __pixit.MIN_ZOOM,
+                        max: __pixit.MAX_ZOOM,
+                        // width: vm.drawingCanvasWidth() + __pixit.CONTAINER_BORDERS,
+                        // maxWidth: args.maxWidth
+                    }),
+
+                ])
+            ])),
+            m('#save-cancel-wrap', rightBtnsAttrs, [
+                m(__pixit.button, {
+                    txt: pl.t('undo'),
+                    disabled: vm.stateStack().length === 0,
+                    click: vm.undo,
+                    id: 'pixit-undo-button'
+                }),
+
+                m(__pixit.button, {
+                    txt: pl.t('cancel'),
+                    click: cancel.bind(null, args.rootEl)
+                }),
+                m(__pixit.button, {
+                    class: 'mdl-button--primary',
+                    txt: pl.t('Save and close'),
+                    click: save.bind(null, args.saveCb, args.rootEl)
+                })
+            ])
+        ]);
+    }
+
+    return {
+        controller: controller,
+        view: view
+    };
+})();
+
+function black_white_context(ctx, x, y, width, height) {
+    var opaqueColors = [0, 0, 0];
+    var opacity = 255;
+    var imgData = ctx.getImageData(x, y, width, height);
+    var data = imgData.data;
+    var len = data.length;
+
+    var threshold = Math.floor(opacity / 2);
+    // opaquing to black-white if the opaqueColors are 0,0,0
+    var toBw = opaqueColors.reduce(function reduce(sum, el) {
+            return sum + el;
+        }, 0) === 0;
+
+    var result = ctx.createImageData(imgData);
+
+    for (var i = 0; i < len; i += 4) {
+        var isAlphaOpaque = data[i + 3] > threshold;
+        var isBlack = data[i] <= threshold;
+
+        for (var j = 0; j <= 2; j++) {
+            if (toBw) {
+                result.data[i + j] = isBlack ?  opaqueColors[j] : 255;
+            } else {
+                result.data[i + j] = isAlphaOpaque ? opaqueColors[j] : 255;
+            }
+        }
+
+        result.data[i + 3] = isAlphaOpaque ? opacity : 0;
+    }
+
+    ctx.putImageData( result,x,y );
+
+}

@@ -1,0 +1,88 @@
+var glyphs_sidedrawer = {
+
+    single_glpyhs: [],
+    ligatures: [],
+
+    controller: function (args) {
+
+        var glyphId = args.itemId;
+        Glyphs.detail(glyphId).then(function(glyph) {
+
+            // ???: the following replicates some of the logic from the font-sidedrawer controller, which is a bit of a
+            // controller for the whole font module. Thats a bit ugly. Somehow it doesn't make sense that the glyph-module
+            // is its on module. Or these logic should be placed somwehere else and not replicated all over all places.
+
+            // handle the case for a not exisiting glpyh, m.route to font module.
+            if ( !glyph ) {
+                m.route('/'+fonts_module.urlPath);
+                setTimeout(function () {
+                    show_toast(pl.t("The Glyph you are looking for doesn't exists."));
+                }, 500);
+            }
+            else {
+                fonts_module.current_font_id(glyph.fontId);
+                fonts_sidedrawer.updateFontsList().then(function () {
+                    glyphs_sidedrawer.updateGlyphsList(glyph.fontId).then(m.redraw);
+                });
+            }
+        });
+    },
+
+    updateGlyphsList: function(fontId) {
+        return Glyphs.listByFontId(fontId).then(function (result) {
+            glyphs_module.glyphs(result);
+
+            // split between single glyphs and ligatures and sort
+            if (glyphs_module.glyphs()) {
+                glyphs_sidedrawer.single_glyphs = glyphs_module.glyphs().slice();
+                glyphs_sidedrawer.single_glyphs = glyphs_sidedrawer.single_glyphs.filter(function (item) {
+                    return countSymbols(item.unit) == 1;
+                });
+                glyphs_sidedrawer.single_glyphs.sort(function (a, b) {
+                    return a.unit.codePointAt(0) - b.unit.codePointAt(0);
+                });
+
+                glyphs_sidedrawer.ligatures = glyphs_module.glyphs().slice();
+                glyphs_sidedrawer.ligatures = glyphs_sidedrawer.ligatures.filter(function (item) {
+                    return countSymbols(item.unit) > 1;
+                }).sort(function (a, b) {
+                    return a.unit > b.unit;
+                });
+            }
+            return result;
+        });
+    },
+
+    view: function () {
+
+        if (!glyphs_module.glyphs() || !fonts_module.current_font() || !glyphs_sidedrawer.single_glyphs ) {
+            return build_centered_spinner(pl.t('Loading ...'));
+        }
+
+        return m('#glyph-drawer-content', [
+            m('h5', fonts_module.current_font().name),
+
+            m("ul#glyph-sidedrawer", [
+                glyphs_sidedrawer.single_glyphs.map(function (glyph) {
+                    var activeClass = glyphs_content.glyphId() && glyph.id == glyphs_content.glyphId()
+                        ? '.active'
+                        : '';
+                    return m("li.clickable" + activeClass, {onclick: glyphs_module.switch_active_glyph.bind(glyphs_module, glyph)}, glyph.unit)
+                }),
+
+                glyphs_sidedrawer.ligatures.length
+                    ? [m('h4', pl.t('Ligatures')),
+                    glyphs_sidedrawer.ligatures.map(function (glyph) {
+                        var activeClass = glyphs_content.glyphId() && glyph.id == glyphs_content.glyphId()
+                            ? '.active'
+                            : '';
+                        return m("li.clickable" + activeClass, {onclick: glyphs_module.switch_active_glyph.bind(glyphs_module, glyph)}, glyph.unit)
+                    })
+
+                ]
+                    : null
+            ])
+        ])
+    }
+
+};

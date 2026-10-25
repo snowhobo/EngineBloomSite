@@ -1,0 +1,404 @@
+pl.extend({
+    "Add": "Add",
+    "Clear": "Clear",
+
+    'Oops! Something went wrong.': 'Oops! Something went wrong.',
+    'Alphabet': 'Alphabet',
+    'Preview': 'Preview',
+
+    // Top main Nav
+    "My Fonts": "My Fonts",
+    "Templates": "Templates",
+
+    // Templates Module Sidedrawer
+    "Minimal": "Minimal",   // eg. Minimal English, Minimal German
+
+    // Create template dialog
+    'Download Template': 'Download Template',
+    "Draw helplines": "Draw helplines",
+    "Characters as background": "Characters as background",
+    "background_chars_tooltip": "Print the character in light grey into the cell.",
+
+    "Add Ligatures": "Add Ligatures",
+    "Ligatures separated by comma": "Ligatures separated by comma",
+
+    "The font you are looking for does not exist.": "The font you are looking for does not exist.",
+    "Ligatures": "Ligatures",
+    "no_variantion_no_random": "There are no characters with variants yet.",
+    "Build": "Build",
+    "Delete": "Delete",
+    "Processing": "Processing",
+    "Default character distance": "Default character distance",
+    "Unexpected error happened": "An unexpected error occurred. Your request has been cancelled.",
+    "dont_ask_again_session": "Do not ask me again during this session.",
+    "Number columns": "Number of columns",
+    "Create": "Create",
+    "Download": "Download",
+    "Result_polling_timed_out": "Your request took too long. <br>Your font might be too complicated or our server may be currently overloaded so please try again later.",
+    "server error happened": "An error occurred while processing your request.",
+    "glyph already exists": "A glyph with this unicode number already exists.",
+    "font with this name already exists.": "A font with this name already exists. Please provide another name.",
+    "glyph with this unit already exists.": "The font already contains this glyph or ligature.",
+    "Unexpected error": "An unexpected error occurred.",
+    "Server down": "The server seems to be down.<br>Please, try again later.",
+    "Cant handle filetype of": "The filetype '%{type}' is not supported for templates.",
+    "template upload result": "We found %{nr_glyphs} glyphs in the %{nr_templates} image(s) you have uploaded.",
+    "Additional Notes": "Additional Notes",
+    "No Template found to process": "We could not find any templates in the uploaded files.",
+    "Result": "Result",
+    "Close": "Close",
+    "Error processing a template.": "One of your template pages could not be processed.",
+    "Error processing the only template.": "We could not process your template.",
+    "back_to_fontname": "Back to \"%{fontname}\"",
+    "Please enter at least one character.": "Please enter at least one character.",
+    "Please enter at least one character, but not more then 4.": "Please enter at least one character, but not more than 4.",
+    "Default Glyph advance": "Default glyph advance (%)",
+    "Temporary server error.": "There seems to be a problem with our server.<br>Please, try again in a few moments.",
+    "After filling out and scanning proceed to": "After scanning, go to \"MY FONTS\" and choose the <b>'Upload Template'</b> option.",
+    "Currently_Ratelimited": "The rate limit in the free version has been reached. <br>Please, try again later.<br><a href=\"ratelimited_infos\">Learn more</a>",
+    "Currently_Ratelimited_header": "Free version limit reached.",
+    "no_job_found": "Somehow we lost your job. Maybe our server is currently overloaded.",
+    "updated_nr_variants": "Updated %{nr_updated} variant(s).",
+    "If you are not satisfied with a character ...": "If you are not satisfied with a character, remove it by clicking on the trash can and it will not be added to your existing font.",
+    "Edit font dialog font scale tool tip": "Scaling factor for all the characters in this font. Use this option to make your font similar in size to other common fonts.",
+    "Edit font dialog font default advance tooltip": "Letter spacing (or tracking) refers to the space between characters. The value you specify here will be used as the default letter spacing. You can also adjust spacing for single characters by editing them.",
+    'Word spacing': 'Word spacing',
+    "edit_font_dialog_tooltip_word_spacing": "Adjusts the spacing between words.",
+
+    "Upload templates overwrite tooltip": "If you select 'Create variants', the new characters will be added as variants of the existing characters. Selecting 'Overwrite' will replace any existing variants with the new characters.",
+    "already created max. number fonts": "You have reached the maximum number of fonts you can concurrently work on with your plan. Before you can create a new font you will have to delete one first.",
+    "max_number_variants_reached": "There are currently %{current} variants in this font but the %{plan} version only supports %{max_nr}. If you create a font, only the first %{max_nr} variants will be used.",
+    "max_number_glyphs_reached_plan": "There are currently %{current} characters or ligatures in this font but the %{plan} version only supports %{max_nr} glyphs per font. If you create a font, only the first %{max_nr} glyphs will be used.",
+    "max_number_variants_reached_plan": "Some of your glyphs have more variants than your current plan allows. Whenever you create a font, only a subset within this limit will be included in the font. ",
+    "max_number_glyphs_reached_plan_template": "There are currently %{current} characters or ligatures in this template but the %{plan} version only supports %{max_nr} glyphs per font. If you create a font, only the first %{max_nr} glyphs will be used.",
+    "max_number_glyphs_abs_reached": "There are currently %{current} characters or ligatures in this template but there is a limit of %{max_nr} characters or ligatures per font and per template upload.",
+    "max_limit_reached_saving_would_result_too_many": "You tried to save a new %{type_name} '%{unit}' but you already have %{max_limit} or more %{type_name}s, which is the maximum number of %{type_name}s supported.",
+    "max_limit_fonts_reached_saving_would_result_too_many": "You tried to save a new font but you already have %{max_limit} or more fonts, which is the maximum number of fonts supported.",
+    "couldnt_create_chars": "Sorry, but we were unable process all the new characters.",
+    "max number reached": "We were unable to finish this action as it would exceed the maximum number of allowed items.",
+    "chars_removed_max_variants_exceeded": "The following characters will not be added, as they would exceed the maximum number of variants per character: ",
+    "chars_removed_max_glyphs_exceeded": "The following characters will not be added, as they would exceed the maximum number of glyphs per font: ",
+    "ligatures_pro_only_will_ignore": "Ligatures are only supported in the Pro version but you are currently using the free version. If you create this font, ligatures will be ignored.",
+    "helplines_tooltip": "Help lines are grey lines inside the template cells which will help you to place your characters at the correct height. However, they might create visual artefacts with some scanners so this option is disabled by default.",
+    "no_ligatures_in_free_plan": "Please note that you are currently using the free version, which does not support ligatures. If you create font ligatures, they will not be included in your final font.",
+    "font_disabled_max_free": "You cannot edit this font. The free version is limited to one font. Please upgrade to unlock this font.",
+    "browser_recommondation": "For the best experience, we recommend you use the latest Chrome or Firefox browser. As for Internet Explorer, only IE11 is supported.",
+    "browser_not_supported": "Your browser does not support some of the features required by our app.",
+    "browser_maybe_supported": "Our app has not been tested on your browser or OS, so it might not work correctly.",
+
+    "font_preview_hint_size_compare": "This allows you to compare the size of the characters in your font to other fonts. If the size of your characters is not appropriate, you can change it via 'Edit Font Details' > 'Font size' and then re-build the font.",
+    "Share on": "Share this image on",
+    "Share a font preview": "Share",
+    "Enter text": "Enter text",
+    'Enter_text_shared_image' : 'Enter your text for the shared font image.',
+    'We_share_only_generated_image': 'You will not share your font file, only an image of text generated with your font.',
+    'daily_sharing_limit_reached': 'Sorry, but you did reach the daily share limit. Please try again tomorrow.',
+
+    "glyph_list_variants_howto_hint": "If you want to add another variant for this glyph, upload another template containing this character and select 'Create Variants' when adding the new characters.",
+    "upload_font_howto_variants_hint": "To add new variants, upload another template after adding these characters. You will then have the choice to select 'Create Variants'.",
+
+    "fonts_toolbar_tooltip_upload_template": "Upload an image of a filled-out template.",
+    "fonts_toolbar_tooltip_build_font": "Build a font file using the character images below.",
+    "fonts_toolbar_tooltip_font_details": "Edit font details like name or letter spacing.",
+
+    "Loading fonts": "Loading fonts",
+    "Loading ...": "Loading ...",
+    "There are no glyphs you could submit yet.": "There are no glyphs you could submit yet.",
+    "Cancel": "Cancel",
+    "Processing ...": "Processing ...",
+    "Please wait.": "Please wait.",
+    "Font files": "Font files",
+    "Download the .ttf font if you are not sure which font type you should use.": "Download the .ttf font if you are not sure which font type you should use.",
+    "Font preview size": "Font preview size",
+    "How to fix common problems": "How to fix common problems",
+    "Size comparison": "Size comparison",
+    "Click into the text to add your own text.": "Click into the text to add your own text.",
+
+
+    // Edit font details Dialog
+    "Edit font details" : "Edit font details",
+    "Create new font": "Create new font",
+    "Main": "Main",
+    "Metadata": "Metadata",
+    "Font name": "Font name",
+    "Font size": "Font size",
+    "Letter spacing": "Letter spacing",
+    "Font style": "Font style",
+    "Version": "Version",
+    "Please enter a number smaller than 1000 and max. 3 decimal places.": "Please enter a number smaller than 1000 and max. 3 decimal places.",
+    "Copyright notice": "Copyright notice",
+    "Manufacturer name": "Manufacturer name",
+    "Designer name": "Designer name",
+    "Editing metadata is available for upgraded accounts.": "Editing metadata is available for upgraded accounts.",
+    "Please enter a number between 1.000 and 9.999": "Please enter a number between 1.000 and 9.999",
+    'Description': 'Description',
+    'Licence description': 'Licence description',
+
+    "Log out": "Log out",
+    "Edit Profile": "Edit Profile",
+    "using_free_version": "You are using the <b>free</b> version.",
+    'Current plan': 'Current plan',
+    'Limits': 'Limits',
+
+    "Adding new characters.": "Adding new characters.",
+
+    "enjoy_pro_version_by_upgrading": "Enjoy the possibility to create fonts with more characters or variants and other great Calligraphr Pro features by <a href=\"%{upgrade_url}\">upgrading now.</a>",
+
+    "you_are_logged_in_as": "You are logged in as %{username}.",
+
+    "Remove all characters and ligatures.": "Remove all characters and ligatures.",
+    "Ligatures are only available in the Pro version.": "Ligatures are only available in the Pro version.",
+    "Remove all": "Remove all",
+    "Do you want to remove all currently selected characters?": "Do you want to remove all currently selected characters?",
+
+    "Just a moment ...": "Just a moment ...",
+    "Font name can't be empty.": "Font name can't be empty.",
+
+    "Edit this character with thr paint tool.": "Edit this character with the paint tool.",
+
+    "adjust_letter_spacing":  "Adjust spacing",
+    "Adjust Letter spacing is only available for upgraded accounts.": "'Adjust Letter Spacing' is only available for upgraded accounts.",
+    "adjust_left_right_spacing_variant" : "Adjust left and right bearings of this variant.",
+    "Left side spacing": "Left side spacing",
+    "Right side spacing": "Right side spacing",
+
+    "Copy character": "Copy character",
+    "Copy this Character.": "Copy this Character.",
+    "Adjust Baseline/Size": "Adjust Baseline/Size",
+    "Adjust Baseline and Size": "Adjust Baseline and Size",
+    "Adjust baseline of this variant.": "Adjust baseline of this variant.",
+    "Default Character": "Default Character",
+    "Make this the default variant.": "Make this the default variant.",
+    "Reset all": "Reset all",
+    "Shuffle": "Shuffle",
+    "Adjust size": "Adjust size",
+    "Adjust baseline": "Adjust baseline",
+    "reset_all_adjustments_for_font": "Do you want to reset the size and baseline adjustments for all characters of this font?",
+
+    // Upload Templates Dialog
+    "Select a file: ": "Select a file: ",
+    "Add another file: ": "Add another file: ",
+    "Remove this file": "Remove this file",
+    "delete": "delete",
+    "Upload Template": "Upload Template",
+    "Max. number of files reached.": "Max. number of files reached.",
+    "select_mulitple_files_or_add_later": "You can select multiple files to upload or add templates at a later date.",
+    "Automatically groom templates.": "Automatically clean templates.",
+    "template_upload_auto_clean_tooltip": "Uploaded templates will be automatically cleaned to remove small artifacts. If your characters have very fine details or you created your template using an image editing application (instead of a scanner or camera), disabling auto correction can improve the result.",
+
+
+    "An unexpected server error happened. Please try again.": "An unexpected server error happened. Please try again.",
+
+    "Character Preview": "Character Preview",
+    "Add characters": "Add characters to your font",
+    "You haven't created any font yet": "You haven't created any font yet",
+    "templates_low_resolution_warning": "At least one of you templates was a bit small. Try to make a photo or scan with a higher resolution for better results.",
+
+    "not_all_chars_plant_limit": "Please note that %{nr_glyphs_removed} of the characters you created are not included in this font . The %{plan_name} is restricted to %{nr_allowed} characters.",
+    "More info": "More info",
+
+    "How to proceed with already existing characters?": "How to proceed with already existing characters?",
+    "Overwrite existing characters.": "Overwrite existing characters.",
+    "Create variants.": "Create variants.",
+
+    "Please select at least one file to upload.": "Please select at least one file to upload.",
+
+    "Download your template: ": "Download your template: ",
+    "Please note:":  "Please note:",
+    "Size of template cells": "Size of template cells",
+
+    "Delete this variant.": "Delete this variant.",
+    "Edit Character": "Edit Character",
+    "This character is the default variant.": "This character is the default variant.",
+
+    "Font was successfully deleted.": "Font was successfully deleted.",
+    "Font was successfully copied.": "Font was successfully copied.",
+
+    "Load Template": "Upload Template",
+    "New Font": "New Font",
+
+    "Build Font": "Build Font",
+    "Randomize characters": "Randomize characters",
+    "Edit Font Details": "Edit Font Details",
+
+    "This character has a custom letter spacing.": "This character has a custom letter spacing.",
+    "Adjust spacing": "Adjust spacing",
+    "Save": "Save",
+    "Use Default": "Use Default",
+
+    "Adding new characters.<br>Please be patient, this might take some time.": "Adding new characters.<br>Please be patient, this might take some time.",
+
+    "Adjust Letter spacing for this character.": "Adjust Letter spacing for this character.",
+
+    "using_pro": 'You are using the <b>Pro</b> version.',
+    "days_left": 'You have %{days_left} days left.',
+    "active_subscription": "You have an active subscription.",
+
+        "variants_for": "Variants for %{unit_type} \"%{unit}\"",
+    "character": "character",
+    "ligature": "ligature",
+    "glyph_not_randomized": "This glyph will not be randomized.",
+    "Loading Variants.": "Loading Variants.",
+    "delete_this_variant?": "Do you want to delete this variant?",
+
+    "Save adjustments": "Save adjustments",
+
+    "template_is_for_quicktest_not_app": "The template you uploaded is meant to be used with the Quick Test. For this app you have to use a template you created with this app in the 'Template' module.",
+
+    "This file is to large. Max. allowed file size is": "This file is too large. Max. allowed file size is",
+    'Please be patient, this might take some time.': 'Please be patient, this might take some time.',
+    'No characters yet.': 'No characters yet.',
+    'loading characters': 'loading characters',
+    "select a font": "select a font",
+    "# Glyphs:": "# Glyphs:",
+    "# Variants:": "# Variants:",
+    "Do you want to delete this font?": "Do you want to delete this font?",
+    "%s items have been synchronized with the server.": "%s items have been synchronized with the server.",
+    "no variants yet": "no variants yet",
+    "The Glyph you are looking for doesn't exists.": "The glyph you are looking for doesn't exist.",
+    "Loaded %s new font(s), %s updated font(s) and deleted %s fonts.": "Loaded %s new font(s), %s updated font(s) and deleted %s fonts.",
+    'Extend your account upgrade': 'Extend your account upgrade',
+    'Upgrade your account': 'Upgrade your account',
+    "Contact": "Contact",
+    "Tutorial": "Tutorial",
+    "Synchronizing with database ...": "Synchronizing with database ...",
+    "My new font created with Calligraphr.com.": "My new font created with Calligraphr.com.",
+    "Calligraphr.com, the most simple way to convert your handwriting or calligraphy into a font.": "Calligraphr.com, the most simple way to convert your handwriting or calligraphy into a font.",
+
+    "template_marker_hint": "Include all those four markers\nuntrimmed on your photo or scan.",
+
+    // templates module
+    "Do you want to delete this glyph from your template?": "Do you want to delete this glyph from your template?",
+    "Add arbitrary Ligatures": "Add arbitrary ligatures",
+    "File name": "File name",
+    "Template Format": "File Format",
+    "No Templates found for this search.": "No templates found for this search.",
+    "Arbitrary characters": "Arbitrary characters",
+    "Type or copy & paste new characters:": "Type or copy and paste new characters:",
+    "Or use the selector:": "Or use the selector:",
+    "Arbitrary Ligatures": "Arbitrary Ligatures",
+
+// fonts module toolbar
+    "Copy Font": "Copy Font",
+    "Delete Font": "Delete Font",
+    "Adjust Baseline": "Adjust Baseline",
+
+// Dashboard
+    'Extend your upgrade now.': 'Extend your upgrade now.',
+    'Extend your account upgrade.': 'Extend your account upgrade.',
+    'Upgrade your account to the Pro version.': 'Upgrade your account to the Pro version.',
+    'One font': 'One font',
+    'fonts': 'fonts',
+    'characters': 'characters',
+    'or ligatures': 'or ligatures',
+    '(no ligatures)': '(no ligatures)',
+    'per font.': 'per font.',
+    'variants per characters': 'variants per character',
+
+    // Editor/Paint tool
+    'Brushes': 'Brushes',
+    'Eraser': 'Eraser',
+    'undo': 'Undo',
+    'Zoom level': 'Zoom level',
+    'Brush size': 'Brush size',
+    "Save and close": "Save and close",
+    'cancel': 'Cancel',
+
+    // Sidedrawer templates module  (keep strings as short as possible)!
+    "Basics": "Basics",
+    "Common Scripts": "Common Scripts",
+    "Miscellaneous": "Miscellaneous",
+    "Languages": "Languages",
+    "Numbers": "Numbers",
+    "Punctuation": "Punctuation",
+    "Adobe Latin 1": "Adobe Latin 1",       // do not tranlsate
+    "Covers major Western European Latin languages.": "Covers major Western European Latin languages.",
+    "Adobe Latin 2": "Adobe Latin 2",       // do not tranlsate
+    "Minimum for Western language Standard fonts.": "Minimum character set for Western language standard fonts.",
+    "Adobe Latin 3": "Adobe Latin 3",       // do not tranlsate
+    "Minimum character set for Western Pro fonts.": "Minimum character set for Western Pro fonts.",
+    "Modern Greek": "Modern Greek",
+    "Greek monotonic orthography.": "Greek monotonic orthography.",
+    "Ancient Greek": "Ancient Greek",
+    "Greek polytonic orthography.": "Greek polytonic orthography.",
+    "Adobe Cyrillic 1": "Adobe Cyrillic 1",     // do not tranlsate
+    "Set for Std/Pro families with Cyrillic support.": "Set for Std/Pro families with Cyrillic support.",
+    "Adobe Cyrillic 2": "Adobe Cyrillic 2",     // do not tranlsate
+    "Extended Cyrillic character set.": "Extended Cyrillic character set.",
+    "Basic Mathematical": "Basic Mathematical",
+    "Commonly used  characters for mathematical notation.": "Commonly used characters for mathematical notation." ,
+    "Mathematical": "Mathematical",
+    "Extended set of characters for mathematical and set notation.": "Extended set of characters for mathematical and set notation.",
+    "Basic Punctuation": "Basic Punctuation",
+    "Commonly used punctuation characters.": "Commonly used punctuation characters.",
+    "Extended set of punctuation characters.": "Extended set of punctuation characters.",
+    "Common ligatures for handwriting fonts.": "Common ligatures for handwriting fonts.",
+    "Currencies": "Currencies",
+    "Symbols for common currencies.": "Symbols for common currencies.",
+    "Dingbats": "Dingbats",
+    "Ornament symbols.": "Ornament symbols.",
+
+
+
+    // Processing error messages
+    "One of your templates was empty, we couldn't find any character.": "One of your templates was empty. We couldn't find any character.",
+    "At least one file was larger then the max. allowed file size of 10MB and was therefore not processed.": "At least one file was larger then the max. allowed file size of 10MB and was therefore not processed."
+
+});
+
+
+
+var snippets = {};
+snippets['template_dashboard'] = ' \
+<h3>What to do next:</h3> \
+<ol>\
+<li>Create your template by choosing a complete character set on the left or compiling a personalized template with arbritrary characters.</li> \
+<li>Click on a character to remove it. Use the bin icon in the upper right to remove all characters.</li>\
+<li>When you are happy with your template, click on <b>\'Download Template\'</b>.</li> \
+<li>Your template will be created and become available for download via the provided link.</li> \
+</ol>\
+';
+
+snippets['dashboard'] = ' <div id="main-dashboard-first-steps"\
+<h3>Your first steps:</h3> \
+<ol id="first-steps-list">\
+<li><a href="?/templates">Create a template</a> and print it out.</li> \
+<li>Fill it out.</li> \
+<li>Use a scanner, digital camera or a smartphone to capture your filled-out template.</li> \
+<li>On the <a href="?/fonts">fonts page</a>, choose the <b>\'Upload template\'</b> option and upload your image file.</li> \
+<li>Finally, click on <b>\'Build font\'</b> and enjoy your font!</li>\
+</ol></div>\
+';
+
+snippets['font_dashboard'] = ' \
+<h3>No fonts yet</h3> \
+<p>You have not created any fonts yet. To do so, <a href="?/templates">create a template</a>, fill it out and scan or take a photo of it.</p> \
+<p>If you already have an image of your template, click on <b>\'Upload Template\'</b> in the toolbar at the top.</p>\
+';
+
+snippets['addjust_baseline_dialog_shortcuts'] = ' \
+    <b>Keyboard shortcuts</b><br> \
+    <table> \
+        <tr><td>left/right</td><td>Shift chars to the left/right.</td></tr> \
+        <tr><td>up/down</td><td>Adjust character up/down.</td></tr> \
+        <tr><td>Shift + up/down&nbsp;&nbsp;</td><td>Adjust character up/down (more).</td></tr> \
+        <tr><td>Shift + left/right&nbsp;&nbsp;</td><td>Select character to the left/right.</td></tr> \
+        <tr><td>+/-</td><td>Scale character up/down.</td></tr> \
+        <tr><td>s</td><td>Shuffle</td></tr> \
+    </table>';
+
+
+snippets['bad_result_hint'] = ' \
+    <b>Result isn\'t satisfying?</b> \
+    If the resulting font has defects take a look at the '
+    + faq_link('faq-common-problems', "'How to fix common problems'") + ' section of our FAQ.';
+
+snippets['no_template_detected_hint'] = ' \
+<br>Please make sure, that\
+<ul style="list-style-type: square; list-style-position: inside;">\
+<li>Your image includes all four markers (those nested rectangles in the corners).</li> \
+<li>The markers and the QRCode are not garbled. For instance by a shadow or a printer out of ink.</li> \
+<li>That you use a template created with Calligraphr, not a template from MyScriptFont, PaintFont or from our Quicktest.</li> \
+</ul> \
+If your template fulfils all of the above requirements and still isn\'t detected please send the template to us (info@calligraphr.com) and we will look if we can improve our processing.\
+    ';

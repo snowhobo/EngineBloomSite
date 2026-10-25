@@ -1,0 +1,21 @@
+/* global __pixit, m */
+
+__pixit.spinner = {
+  /**
+   * @param {object} ctrl
+   * @param {{show: function, width: number, height: number}} args
+   * @return {VirtualDomEl}
+   */
+  view: function view(ctrl, args) {
+    return m('.spinnerContainer',
+      {
+        class: args.show() ? '' : 'no',
+        style: {
+          width: args.width + 'px',
+          height: args.height + 'px'
+        }
+      },
+      m('.spinner.mdl-spinner.mdl-js-spinner.is-active')
+    );
+  }
+};

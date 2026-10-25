@@ -1,0 +1,12 @@
+var dashboard_module = {
+    urlPath: "",
+    label: "Dashboard",
+
+    // components
+    sidedrawer: null,
+    content: dashboard_content,
+    toolbar: dashboard_toolbar
+};
+
+
+modules[dashboard_module.urlPath] = dashboard_module;
