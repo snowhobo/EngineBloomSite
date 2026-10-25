@@ -9,7 +9,7 @@
         color:rgb(255, 251, 236);
     }
 .painting {
-    
+    width: 350px;
 }
 
 body {
@@ -34,20 +34,20 @@ body {
     scrollbar-color: coral;
 }
 .gallery {
+    text-align: center;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     width: 4000px;
-    background-color: coral;
 }
 .A1 {
-background-color: aquamarine;
-text-align: center;
+    text-align: center;
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+column-gap: 0px;
 }
 .A2 {
-background-color: cornflowerblue;
 text-align: center;
 }
 .A3 {
-background-color: rgb(219, 165, 29);
 text-align: center;
 }
