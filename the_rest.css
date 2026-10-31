@@ -12,8 +12,8 @@ body {
     flex-direction: row;
 }
 .enginecenter {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    display: flex;
+    flex-direction: row;
     background-color: coral;
     text-align: center;
     cursor: help;
@@ -24,8 +24,8 @@ body {
 }
 .housing {
     z-index: 10;
-    width: 225px;
-    height: 225px;
+    width: 200px;
+    height: 200px;
     background-color: blueviolet;
     transition: background-color 0.5s;
 }
@@ -36,31 +36,31 @@ body {
     background-color: rgb(255, 192, 19);
 }
 .plants {
-    width: 100px;
-    height: 100px;
-    flex: 1;
-    transform: translate(65px, 175px);
-    background-color: aquamarine;
+    z-index: 8;
+    width: 200px;
+    height: 200px;
+    transform: translate(0px, 175px);
+    background-color: rgb(8, 168, 115);
     transition: transform ease-in-out 0.5s;
 }
 .plants:hover {
     background-color: rgb(0, 0, 0);
-    transform: translate(65px, 100px);
+    transform: translate(0px, 0px);
 }
 .plants:active {
     background-color: rgb(255, 192, 19);
 }
 .magnetics {
-    width: 100px;
-    height: 100px;
-    flex: 1;
-    transform: translate(65px, -75px);
-    background-color: aquamarine;
+    z-index: 8;
+    width: 200px;
+    height: 200px;
+    transform: translate(0px, -175px);
+    background-color: rgb(163, 67, 175);
     transition: transform ease-in-out 0.5s;
 }
 .magnetics:hover {
     background-color: rgb(0, 0, 0);
-    transform: translate(65px, 0px);
+    transform: translate(0px, 0px);
 }
 .magnetics:active {
     background-color: rgb(255, 192, 19);
@@ -70,42 +70,46 @@ body {
     flex-direction: column;
 }
 .electrode {
-    width: 100px;
-    height: 100px;
-    flex: 1;
-    transform: translate(-75px, 175px);
+    z-index: 6;
+    width: 200px;
+    height: 200px;
+    transform: translate(-175px, 175px);
     background-color: rgb(190, 60, 60);
     transition: transform ease-in-out 0.5s;
 }
 .electrode:hover {
     background-color: rgb(0, 0, 0);
-    transform: translate(0px, 100px);
+    transform: translate(0px, 0px);
 }
 .electrode:active {
     background-color: rgb(255, 192, 19);
 }
 .separator {
-    width: 100px;
-    height: 100px;
-    flex: 1;
+    z-index: 8;
+    width: 200px;
+    height: 200px;
+    transform: translate(-175px, 0px);
     background-color: rgb(221, 255, 127);
     transition: transform ease-in-out 0.5s;
 }
 .separator:hover {
     background-color: rgb(0, 0, 0);
+    transform: translate(0px, 0px);
 }
 .separator:active {
     background-color: rgb(255, 192, 19);
 }
 .condenser {
+    z-index: 6;
     width: 200px;
     height: 200px;
-    flex: 1;
+    transform: translate(-175px, -175px);
     background-color: rgb(204, 127, 255);
     transition: transform ease-in-out 0.5s;
 }
 .condenser:hover {
     background-color: rgb(0, 0, 0);
+    transform: translate(0px, 0px);
 }
 .condenser:active {
     background-color: rgb(255, 192, 19);
@@ -115,40 +119,46 @@ body {
     flex-direction: column;
 }
 .waterbars {
+    z-index: 6;
     width: 200px;
     height: 200px;
-    flex: 1;
+    transform: translate(175px, -175px);
     background-color: rgb(255, 174, 127);
     transition: transform ease-in-out 0.5s;
 }
 .waterbars:hover {
     background-color: rgb(0, 0, 0);
+    transform: translate(0px, 0px);
 }
 .waterbars:active {
     background-color: rgb(255, 192, 19);
 }
 .propeller {
+    z-index: 8;
     width: 200px;
     height: 200px;
-    flex: 1;
+    transform: translate(175px, 0px);
     background-color: aquamarine;
     transition: transform ease-in-out 0.5s;
 }
 .propeller:hover {
     background-color: rgb(0, 0, 0);
+    transform: translate(0px, 0px);
 }
 .propeller:active {
     background-color: rgb(255, 192, 19);
 }
 .windcoil {
+    z-index: 6;
     width: 200px;
     height: 200px;
-    flex: 1;
+    transform: translate(175px, 175px);
     background-color: rgb(129, 127, 255);
     transition: transform ease-in-out 0.5s;
 }
 .windcoil:hover {
     background-color: rgb(0, 0, 0);
+    transform: translate(0px, 0px);
 }
 .windcoil:active {
     background-color: rgb(255, 192, 19);
