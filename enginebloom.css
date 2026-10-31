@@ -54,6 +54,7 @@ body {
 }
 .plants:active {
     background-color: rgb(255, 192, 19);
+    
 }
 .magnetics {
     z-index: 8;
