@@ -1,5 +1,90 @@
 .wicon {
     border-radius: 1746px;
+    width: 30px;
+}
+.engine {
+    display: flex;
+    flex-direction: row;
+}
+.enginecenter {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    background-color: coral;
+    text-align: center;
+    width: 300px;
+    height: 300px;
+}
+.E2 {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr;
+}
+.housing {
+    width: 100px;
+    height: 100px;
+    background-color: blueviolet;
+    transform: 0.5s;
+}
+.plants {
+    width: 100px;
+    height: 100px;
+    background-color: aquamarine;
+    transform: 0.5s;
+}
+.magnetics {
+    width: 100px;
+    height: 100px;
+    background-color: aquamarine;
+    transform: 0.5s;
+}
+.E3 {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr;
+}
+.electrode {
+    width: 100px;
+    height: 100px;
+    background-color: rgb(255, 127, 127);
+    transform: 0.5s;
+}
+.separator {
+    width: 100px;
+    height: 100px;
+    background-color: rgb(221, 255, 127);
+    transform: 0.5s;
+}
+.condenser {
+    width: 100px;
+    height: 100px;
+    background-color: rgb(204, 127, 255);
+    transform: 0.5s;
+}
+.E1 {
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr;
+}
+.waterbars {
+    width: 100px;
+    height: 100px;
+    background-color: rgb(255, 174, 127);
+    transform: 0.5s;
+}
+.propeller {
+    width: 100px;
+    height: 100px;
+    background-color: aquamarine;
+    transform: 0.5s;
+}
+.windcoil {
+    width: 100px;
+    height: 100px;
+    background-color: rgb(129, 127, 255);
+    transform: 0.5s;
+}
+.engineleft {
+    flex: 1;
+}
+.engineright {
+    flex: 1;
 }
 .the-button {
         background: rgb(32, 116, 67);
@@ -7,7 +92,14 @@
         border: 0;
         border-radius: 15px;
         color:rgb(255, 251, 236);
+        transition: background-color 1s;
     }
+.the-button:hover {
+    background-color: greenyellow;
+}
+.the-button:active {
+    background-color: coral;
+}
 .painting {
     width: 350px;
 }
@@ -18,26 +110,17 @@ body {
             background-size: cover;
         }
 .title {
-    align-self: center;
-}
-.enginecenter {
-    background-color: coral;
-    width: 300px;
-    height: 300px;
     text-align: center;
-    display: inline-block;
+    font-family: Arial;
+    font-size: 100px;
 }
 .gscroll {
-    display: flexbox;
-    overflow: auto;
-    white-space: nowrap;
-    scrollbar-color: coral;
+    display: flex;
 }
 .gallery {
     text-align: center;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    width: 4000px;
 }
 .A1 {
     text-align: center;
