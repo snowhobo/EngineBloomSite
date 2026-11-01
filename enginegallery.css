@@ -1,0 +1,39 @@
+.the-button {
+    background: rgb(32, 116, 67);
+    cursor: help;
+    border: 0;
+    border-radius: 15px;
+    color:rgb(255, 251, 236);
+
+    transition: background-color 1s;
+}
+.the-button:hover {
+    background-color: greenyellow;
+}
+.the-button:active {
+    background-color: coral;
+}
+.painting {
+    width: 350px;
+}
+
+.gscroll {
+    display: flex;
+}
+.gallery {
+    text-align: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+}
+.A1 {
+    text-align: center;
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+column-gap: 0px;
+}
+.A2 {
+text-align: center;
+}
+.A3 {
+text-align: center;
+}
