@@ -29,7 +29,6 @@ body {
     .enginecenter {
         display: flex;
         flex-direction: row;
-        background-color: coral;
         text-align: center;
         cursor: help;
     }
@@ -65,7 +64,6 @@ body {
                 transition: transform ease-in-out 0.5s;
             }
                 .plants:hover {
-                    background-color: rgb(0, 0, 0);
                     transform: translate(140px, 0px);
                 }
                     .plants:active {
@@ -102,7 +100,6 @@ body {
                 transition: transform ease-in-out 0.5s;
             }
                 .electrode:hover {
-                    background-color: rgb(0, 0, 0);
                     transform: translate(0px, 280px);
                 }
                     .electrode:active {
