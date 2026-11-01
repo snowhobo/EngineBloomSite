@@ -2,10 +2,15 @@
     border-radius: 1746px;
     width: 30px;
 }
+@font-face {
+    font-family: AblobingusBlue;
+    src: url('font/AblobingusBlue-Regular.ttf');
+    font-weight: normal;
+}
 .title {
     text-align: center;
-    font-family: Arial;
-    font-size: 100px;
+    font-family: AblobingusBlue;
+    font-size: 200px;
 }
 body {
             background-image: url('images/backgroundshot.jpg');
