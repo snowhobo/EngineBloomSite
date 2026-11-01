@@ -39,12 +39,12 @@ body {
         }
             .housing {
                 z-index: 10;
-                width: 200px;
-                height: 200px;
-                background-image: url('images/enginetesthull.jpg');
-                background-size: contain;
+                width: 460px;
+                height: 240px;
+                background-image: url('images/enginehull.png');
+                background-size: 550px;
                 background-repeat: no-repeat;
-                background-position: 0px 35px;
+                background-position: -42px -75px;
                 transition: background-color 0.5s;
             }
                 .housing:hover {
@@ -55,15 +55,18 @@ body {
                     }
             .plants {
                 z-index: 8;
-                width: 200px;
-                height: 200px;
-                transform: translate(0px, 175px);
-                background-image: url('images/enginetesthull.jpg');
+                width: 280px;
+                height: 232px;
+                transform: translate(140px, 120px);
+                background-image: url('images/engineflowers.png');
+                background-size: 400px;
+                background-repeat: no-repeat;
+                background-position: -54px -30px;
                 transition: transform ease-in-out 0.5s;
             }
                 .plants:hover {
                     background-color: rgb(0, 0, 0);
-                    transform: translate(0px, 0px);
+                    transform: translate(140px, 0px);
                 }
                     .plants:active {
                         background-color: rgb(255, 192, 19);    
@@ -73,7 +76,7 @@ body {
                 width: 200px;
                 height: 200px;
                 transform: translate(0px, -175px);
-                background-image: url('images/enginetesthull.jpg');
+                background-image: url('images/enginemagnetics.png');
                 transition: transform ease-in-out 0.5s;
             }
                 .magnetics:hover {
@@ -88,16 +91,19 @@ body {
             flex-direction: column;
         }
             .electrode {
-                z-index: 6;
-                width: 200px;
-                height: 200px;
-                transform: translate(-175px, 175px);
-                background-image: url('images/enginetestgear.jpg');
+                z-index: 7;
+                width: 120px;
+                height: 155px;
+                transform: translate(-90px, 280px);
+                background-image: url('images/enginegear.png');
+                background-repeat: no-repeat;
+                background-size: 400px;
+                background-position: -150px -75px;
                 transition: transform ease-in-out 0.5s;
             }
                 .electrode:hover {
                     background-color: rgb(0, 0, 0);
-                    transform: translate(0px, 0px);
+                    transform: translate(0px, 280px);
                 }
                     .electrode:active {
                         background-color: rgb(255, 192, 19);
@@ -107,7 +113,7 @@ body {
                 width: 200px;
                 height: 200px;
                 transform: translate(-175px, 0px);
-                background-image: url('images/enginetestseparator.jpg');
+                background-image: url('images/engineseparator.png');
                 background-size: 150px;
                 background-repeat: no-repeat;
                 background-position: 0px 50px;
@@ -121,11 +127,14 @@ body {
                         background-color: rgb(255, 192, 19);
                     }
             .condenser {
-                z-index: 6;
-                width: 200px;
-                height: 200px;
-                transform: translate(-175px, -175px);
-                background-image: url('images/enginetestcondenser.jpg');
+                z-index: 8;
+                width: 210px;
+                height: 110px;
+                transform: translate(-250px, -15px);
+                background-image: url('images/enginecondenser.jpg');
+                background-position: -95px -110px;
+                background-size: 400px;
+                background-repeat: no-repeat;
                 transition: transform ease-in-out 0.5s;
             }
                 .condenser:hover {
@@ -144,7 +153,7 @@ body {
                 width: 200px;
                 height: 200px;
                 transform: translate(175px, -175px);
-                background-image: url('images/enginetestcondenser.jpg');
+                background-image: url('images/enginewaterbar.png');
                 transition: transform ease-in-out 0.5s;
             }
                 .waterbars:hover {
@@ -159,7 +168,7 @@ body {
                 width: 200px;
                 height: 200px;
                 transform: translate(175px, 0px);
-                background-image: url('images/enginetestpropeller.jpg');
+                background-image: url('images/enginepropeller.png');
                 background-size: contain;
                 background-repeat: no-repeat;
                 background-position: 0px 50px;
@@ -177,7 +186,7 @@ body {
                 width: 200px;
                 height: 200px;
                 transform: translate(175px, 175px);
-                background-image: url('images/enginetestrotor.jpg');
+                background-image: url('images/enginerotor.png');
                 transition: transform ease-in-out 0.5s;
             }
                 .windcoil:hover {
