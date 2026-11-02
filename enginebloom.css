@@ -8,9 +8,22 @@
     font-weight: normal;
 }
 .title {
+    margin-top: 300px;
     text-align: center;
     font-family: AblobingusBlue;
     font-size: 200px;
+}
+.header {
+    position: fixed;
+    width: 100%;
+    height: 70px;
+    top: 0px;
+    left: 0px;
+    background-image: url('images/bordertear.png');
+    background-color: rgb(255, 138, 92);
+    background-repeat: repeat-x;
+    background-size: 1920px;
+    background-position-y: -55px;
 }
 body {
             background-image: url('images/backgroundshot.jpg');
@@ -20,7 +33,7 @@ body {
 .warmhoneyspeed {
     position: absolute;
     width: 100%;
-    margin-top: 400px;
+    margin-top: 300px;
 }
 .engine {
     display: flex;

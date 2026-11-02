@@ -1,0 +1,14 @@
+body {
+            background-color: rgb(255, 138, 92);
+        }
+@font-face {
+    font-family: AblobingusBlue;
+    src: url('font/AblobingusBlue-Regular.ttf');
+    font-weight: normal;
+    }
+.title {
+    margin-top: 300px;
+    font-family: AblobingusBlue;
+    font-size: 200px;
+    text-align: center;
+}
